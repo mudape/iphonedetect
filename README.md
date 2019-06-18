@@ -10,3 +10,13 @@ Scan interval time must be shorter then the arp cache is cleared, or the phone w
 Leave the default scan interval at the default value or make it shorter. 
 
 Uses Home-Assistant's Ping device_tracker and idea/script from https://community.home-assistant.io/t/iphone-device-tracker-on-linux/13698
+
+## Example configuration.yaml
+
+```yaml
+device_tracker:
+  - platform: iphonedetect
+    hosts:
+    iphone_user1: 192.168.0.17
+    iphone_user2: 192.168.0.24
+```
