@@ -7,8 +7,8 @@ Uses Home Assistant's [Ping](https://www.home-assistant.io/components/ping/#pres
 Only **ip adresses** will work, _no hostnames_!  
 You have to assign a **static** ip adress(es) to your iPhone's, probably in your router. 
 
-_The interval_seconds time must be shorter then the arp cache is cleared (usally 15-45sec), or the phone will be marked not_home.  
-So, leave the it at the default value (12sec) or make it shorter. _
+_The interval_seconds time must be shorter then the arp cache is cleared (usally 15-45sec), or the phone will be marked not_home._  
+_So, leave the it at the default value (12sec) or make it shorter._
 
 ## Example configuration.yaml
 
