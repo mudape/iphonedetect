@@ -17,6 +17,6 @@ Uses Home-Assistant's Ping device_tracker and idea/script from https://community
 device_tracker:
   - platform: iphonedetect
     hosts:
-    iphone_user1: 192.168.0.17
-    iphone_user2: 192.168.0.24
+      iphone_user1: 192.168.0.17
+      iphone_user2: 192.168.0.24
 ```
