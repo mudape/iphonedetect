@@ -1,3 +1,7 @@
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs) 
+![GitHub release](https://img.shields.io/github/release/mudape/iphonedetect.svg)
+![GitHub issues](https://img.shields.io/github/issues/mudape/iphonedetect.svg)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/mudape/iphonedetect.svg)  
 # iPhone Detect
 This component sends a message to the defined hosts on udp port 5353.  
 iPhone's responds, even when in deep sleep, and an entry in the arp cache is made .  
