@@ -1,6 +1,6 @@
 {
   "domain": "iphonedetect",
-  "name": "iphonedetect",
+  "name": "iPhone Detect",
   "documentation": "https://github.com/mudape/iphonedetect",
   "dependencies": [],
   "codeowners": [],
