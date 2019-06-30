@@ -1,6 +1,6 @@
 {
   "domain": "iphonedetect",
-  "name": "iPhone Detect",
+  "name": "iPhone Device Tracker",
   "documentation": "https://github.com/mudape/iphonedetect",
   "dependencies": [],
   "codeowners": [],
