@@ -4,12 +4,12 @@
 ![GitHub pull requests](https://img.shields.io/github/issues-pr/mudape/iphonedetect.svg)  
 # iPhone Detect
 This component sends a message to the defined hosts on udp port 5353.  
-iPhone's responds, even when in deep sleep, and an entry in the arp cache is made .  
+iPhone's responds, _even when in deep sleep_, and an entry in the arp cache is made .  
 
-Uses Home Assistant's [Ping](https://www.home-assistant.io/components/ping/#presence-detection) [device_tracker](https://www.home-assistant.io/components/device_tracker/) and idea/script from [return01](https://community.home-assistant.io/t/iphone-device-tracker-on-linux/13698)
+Uses Home Assistant's [Ping](https://www.home-assistant.io/components/ping/#presence-detection) [device_tracker](https://www.home-assistant.io/components/device_tracker/) and idea/script from [return01](https://community.home-assistant.io/u/return01)
 
-Only **ip adresses** will work, _no hostnames_!  
-You have to assign a **static** ip adress(es) to your iPhone's, probably in your router. 
+Only **ip addresses** will work, _no hostnames_!  
+You have to assign a **static** ip address(es) to your iPhone's, probably in your router. 
 
 _The interval_seconds time must be shorter then the arp cache is cleared (usally 15-45sec), or the phone will be marked not_home._
 _So, leave it at the default value (12sec) or make it shorter._
