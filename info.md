@@ -1,7 +1,11 @@
+  
 This component sends a message to the defined hosts on udp port 5353.  
-iPhone's responds, even when in deep sleep, and an entry in the arp cache is made .  
+iPhone's responds, even when in deep sleep, and an entry in the arp cache is made . 
 
-## Usage:
+### Requirements
+You have to assign <b>static</b> ip address(es) to your iPhone('s), probably in your router.  
+
+### Configuration
 Add to configuration.yaml
 
 ```yaml
