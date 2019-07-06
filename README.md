@@ -3,7 +3,7 @@
 ![GitHub issues](https://img.shields.io/github/issues/mudape/iphonedetect.svg)
 ![GitHub pull requests](https://img.shields.io/github/issues-pr/mudape/iphonedetect.svg)  
 # iPhone Detect
-This component sends a message to the defined hosts on udp port 5353.  
+This integration sends a message to the defined hosts on udp port 5353.  
 iPhone's responds, _even when in deep sleep_, and an entry in the arp cache is made .  
 
 Uses Home Assistant's [Ping](https://www.home-assistant.io/components/ping/#presence-detection) [device_tracker](https://www.home-assistant.io/components/device_tracker/) and idea/script from [return01](https://community.home-assistant.io/u/return01)
@@ -20,10 +20,26 @@ _So, leave it at the default value (12sec) or make it shorter._
 device_tracker:
   - platform: iphonedetect
     consider_home: 60
+    new_device_defaults:
+      track_new_devices: true
+      hide_if_away: false
     hosts:
       hostname1: 192.168.0.17
       hostname2: 192.168.0.24
 ```
+This will create `device_tracker.hostname1` and `device_tracker.hostname2` once the devices has been detected on your wifi.  
+Cycle wifi on your device to trigger their creation on first run.  
 
+__Note__  
+If you have `track_new_devices: false` (in this or any integrations specified before this) for the device_tracker component you need to manually change `track:` to true for each device in `known_devices.yaml`  
+(see component settings for [device_tracker](https://www.home-assistant.io/components/device_tracker/#configuring-a-device_tracker-platform))  
+```hostname1:
+  hide_if_away: false
+  icon:
+  mac:
+  name: hostname1
+  picture:
+  track: true
+```
 
 <a href="https://www.buymeacoffee.com/MudApe" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: auto !important;width: auto !important;" ></a>
