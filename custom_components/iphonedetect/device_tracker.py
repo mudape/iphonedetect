@@ -56,16 +56,19 @@ class Host:
         aSocket.sendto(message, addr)
     
         try:
-            output = subprocess.check_output('ip -o neigh', shell=True)
-            output = output.decode('utf-8').split('\n')
-            for entry in output:
-                mac = entry.split(' ')
-                if mac[0] == self.ip_address:
-                    if mac[-1] == "REACHABLE":
-                        return True
-
+            output = subprocess.check_output('ip n|grep '+self.ip_address, shell=True)
+            output = output.decode('utf-8').split(' ')
+            if len(output[4].split(':')) == 6:
+                return True
         except subprocess.CalledProcessError:
-            return False
+            try:
+                output = subprocess.check_output('arp -na|grep '+self.ip_address, shell=True)
+                output = output.decode('utf-8').split(' ')
+                if len(output[3].split(':')) == 6:
+                    return True
+            except subprocess.CalledProcessError as error:
+                _LOGGER.fatal("Could not send command, got %s", error)
+                return False
 
     def update(self, see):
         """Update device state by sending one or more ping messages."""
