@@ -27,7 +27,7 @@ from homeassistant import const
 
 import socket
 
-__version__ = '1.2.0'
+__version__ = '1.2.1'
 
 _LOGGER = logging.getLogger(__name__)
 
