@@ -1,7 +1,0 @@
-{
-  "name": "iPhone Device Tracker",
-  "domains": ["device_tracker"],
-  "zip_release": true,
-  "filename": "iphonedetect.zip",
-  "homeassistant": "0.94.0"
-}
