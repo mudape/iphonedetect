@@ -1,0 +1,8 @@
+{
+  "name": "iPhone Device Tracker",
+  "homeassistant": "0.94.0",
+  "iot_class": "Local Polling",
+  "domains": ["device_tracker"],
+  "zip_release": false,
+  "filename": ""
+}
