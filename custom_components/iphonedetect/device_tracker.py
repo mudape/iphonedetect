@@ -12,6 +12,7 @@ device_tracker:
 import logging
 import subprocess
 import sys
+import re
 from datetime import timedelta
 
 import voluptuous as vol
@@ -46,9 +47,7 @@ class Host:
         self.dev_id = dev_id
 
     def detectiphone(self):
-        """Send udp message to port 5353 
-           and return True if an arp chache entry is made success.
-        """
+        """Send udp message and look for MAC address."""
         aSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         aSocket.settimeout(1)
         addr = (self.ip_address, 5353)
@@ -56,19 +55,26 @@ class Host:
         aSocket.sendto(message, addr)
     
         try:
-            output = subprocess.check_output('ip n|grep '+self.ip_address, shell=True)
-            output = output.decode('utf-8').split(' ')
-            if len(output[4].split(':')) == 6:
-                return True
+            output = subprocess.check_output('ip neigh show to ' + self.ip_address, shell=True)
+            output = output.decode('utf-8').rstrip()
+            _LOGGER.debug(f'ip n output for {self.dev_id} is: {output}')
         except subprocess.CalledProcessError:
             try:
-                output = subprocess.check_output('arp -na|grep '+self.ip_address, shell=True)
-                output = output.decode('utf-8').split(' ')
-                if len(output[3].split(':')) == 6:
-                    return True
-            except subprocess.CalledProcessError as error:
-                _LOGGER.fatal("Could not send command, got %s", error)
+                output = subprocess.check_output('arp -na|grep ' + self.ip_address, shell=True)
+                output = output.decode('utf-8').rstrip()
+                _LOGGER.debug(f'arp output for {self.dev_id} is: {output}')
+            except subprocess.CalledProcessError:
+                _LOGGER.fatal("Could not probe network")
                 return False
+
+        mac = re.compile(r'(?:[0-9a-fA-F]:?){12}')
+
+        if re.findall(mac, output):
+            _LOGGER.debug(f"Device {self.dev_id} ({self.ip_address}) is HOME")
+            return True
+        else:
+            _LOGGER.debug(f"Device {self.dev_id} ({self.ip_address}) is AWAY")
+            return False
 
     def update(self, see):
         """Update device state by sending one or more ping messages."""
