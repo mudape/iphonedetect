@@ -6,7 +6,7 @@
 This integration sends a message to the defined hosts on udp port 5353.  
 iPhone's responds, _even when in deep sleep_, and an entry in the arp cache is made .  
 
-Uses Home Assistant's [Ping](https://www.home-assistant.io/components/ping/#presence-detection) [device_tracker](https://www.home-assistant.io/components/device_tracker/) and idea/script from [return01](https://community.home-assistant.io/u/return01)
+Uses Home Assistant's [device_tracker](https://www.home-assistant.io/components/device_tracker/) and idea/script from [return01](https://community.home-assistant.io/u/return01)
 
 Only **ip addresses** will work, _no hostnames_!  
 You have to assign a **static** ip address(es) to your iPhone's, probably in your router. 
@@ -20,9 +20,9 @@ _So, leave it at the default value (12sec) or make it shorter._
 device_tracker:
   - platform: iphonedetect
     consider_home: 60
+    scan_interval: 12
     new_device_defaults:
       track_new_devices: true
-      hide_if_away: false
     hosts:
       hostname1: 192.168.0.17
       hostname2: 192.168.0.24
@@ -33,8 +33,8 @@ Cycle wifi on your device to trigger their creation on first run.
 __Note__  
 If you have `track_new_devices: false` (in this or any integrations specified before this) for the device_tracker component you need to manually change `track:` to true for each device in `known_devices.yaml`  
 (see component settings for [device_tracker](https://www.home-assistant.io/components/device_tracker/#configuring-a-device_tracker-platform))  
-```hostname1:
-  hide_if_away: false
+```yaml
+hostname1:
   icon:
   mac:
   name: hostname1
