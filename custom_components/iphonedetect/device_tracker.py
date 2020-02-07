@@ -94,7 +94,7 @@ def setup_scanner(hass, config, see, discovery_info=None):
                 host.update(see)
         finally:
             hass.helpers.event.track_point_in_utc_time(
-                update_interval, util.dt.utcnow() + interval)
+                update_interval, dt_util.utcnow() + interval)
 
     update_interval(None)
     return True
