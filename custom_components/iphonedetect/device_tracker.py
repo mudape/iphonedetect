@@ -10,31 +10,27 @@ device_tracker:
       host_two: 192.168.2.25
 """
 import logging
-import subprocess
-import sys
 import re
-from datetime import timedelta
-
-import voluptuous as vol
+import socket
+import subprocess
 
 import homeassistant.helpers.config_validation as cv
-from homeassistant.components.device_tracker import (
-    PLATFORM_SCHEMA)
-from homeassistant.components.device_tracker.const import (
-    CONF_SCAN_INTERVAL, SCAN_INTERVAL, SOURCE_TYPE_ROUTER)
+import homeassistant.util.dt as dt_util
+import voluptuous as vol
+from homeassistant.components.device_tracker import PLATFORM_SCHEMA
+from homeassistant.components.device_tracker.const import (SCAN_INTERVAL,
+                                                           SOURCE_TYPE_ROUTER)
+from homeassistant.const import CONF_HOSTS, CONF_SCAN_INTERVAL
 
-from homeassistant import util
-from homeassistant import const
 
-import socket
-
-__version__ = '1.2.1'
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
+    {
+    vol.Required(CONF_HOSTS): {cv.string: cv.string},
+    vol.Optional(CONF_SCAN_INTERVAL): cv.time_period,
+    }
+)
 
 _LOGGER = logging.getLogger(__name__)
-
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Required(const.CONF_HOSTS): {cv.string: cv.string},
-})
 
 
 class Host:
@@ -85,7 +81,7 @@ class Host:
 def setup_scanner(hass, config, see, discovery_info=None):
     """Set up the Host objects and return the update function."""
     hosts = [Host(ip, dev_id, hass, config) for (dev_id, ip) in
-             config[const.CONF_HOSTS].items()]
+             config[CONF_HOSTS].items()]
     interval = config.get(CONF_SCAN_INTERVAL, SCAN_INTERVAL)
 
     _LOGGER.debug("Started iphonedetect with interval=%s on hosts: %s",
