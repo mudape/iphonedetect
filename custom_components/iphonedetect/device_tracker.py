@@ -63,7 +63,7 @@ class Host:
                 _LOGGER.fatal("Could not probe network")
                 return False
 
-        mac = re.compile(r'(?:[0-9a-fA-F]:?){12}')
+        mac = re.compile(r'(?:[0-9A-F]{2}[:-]){5}(?:[0-9A-F]{2})', re.IGNORECASE)
 
         if re.findall(mac, output):
             _LOGGER.debug(f"Device {self.dev_id} ({self.ip_address}) is HOME")
