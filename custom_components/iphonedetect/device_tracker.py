@@ -41,6 +41,7 @@ class Host:
         self.hass = hass
         self.ip_address = ip_address
         self.dev_id = dev_id
+        self.mac = None
 
     def detectiphone(self):
         """Send udp message and look for MAC address."""
@@ -49,7 +50,7 @@ class Host:
         addr = (self.ip_address, 5353)
         message = b'Steve Jobs'
         aSocket.sendto(message, addr)
-    
+
         try:
             output = subprocess.check_output('ip neigh show to ' + self.ip_address, shell=True)
             output = output.decode('utf-8').rstrip()
@@ -63,10 +64,13 @@ class Host:
                 _LOGGER.fatal("Could not probe network")
                 return False
 
-        mac = re.compile(r'(?:[0-9A-F]{2}[:-]){5}(?:[0-9A-F]{2})', re.IGNORECASE)
+        mac_pattern = re.compile(r'(?:[0-9A-F]{2}[:-]){5}(?:[0-9A-F]{2})', re.IGNORECASE)
 
-        if re.findall(mac, output):
+        mac = re.findall(mac_pattern, output)
+
+        if mac:
             _LOGGER.debug(f"Device {self.dev_id} ({self.ip_address}) is HOME")
+            self.mac = mac[0]
             return True
         else:
             _LOGGER.debug(f"Device {self.dev_id} ({self.ip_address}) is AWAY")
@@ -75,7 +79,14 @@ class Host:
     def update(self, see):
         """Update device state by sending one or more ping messages."""
         if self.detectiphone():
-            see(dev_id=self.dev_id, source_type=SOURCE_TYPE_ROUTER)
+            see(
+                dev_id=self.dev_id,
+                source_type=SOURCE_TYPE_ROUTER,
+                mac=self.mac,
+                host_name=self.dev_id,
+                gps=(self.hass.config.latitude, self.hass.config.longitude),
+                gps_accuracy=0,
+            )
             return True
 
 def setup_scanner(hass, config, see, discovery_info=None):
@@ -86,7 +97,7 @@ def setup_scanner(hass, config, see, discovery_info=None):
 
     _LOGGER.debug("Started iphonedetect with interval=%s on hosts: %s",
                   interval, ",".join([host.ip_address for host in hosts]))
-    
+
     def update_interval(now):
         """Update all the hosts on every interval time."""
         try:
