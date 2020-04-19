@@ -1,4 +1,14 @@
-  
+{% if installed %}
+## Changes as compared to your installed version:
+
+### Breaking Changes
+
+### Changes
+- Remove minimum Home-Assistant release from manifest.json
+
+### Features
+- Add [Hassfest](https://developers.home-assistant.io/blog/2020/04/16/hassfest/)  
+{% endif %}  
 Tracks iPhone's connected to local wifi, even when they are in deep sleep.  
 
 ### Requirements
