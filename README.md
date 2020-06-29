@@ -30,6 +30,8 @@ device_tracker:
 This will create `device_tracker.hostname1` and `device_tracker.hostname2` once the devices has been detected on your wifi.  
 Cycle wifi on your device to trigger their creation on first run.  
 
+When you set up automations or scripts in the Home Assistant front end, the two states for this device are either `home` or `not_home`.
+
 __Note__  
 If you have `track_new_devices: false` (in this or any integrations specified before this) for the device_tracker component you need to manually change `track:` to true for each device in `known_devices.yaml`  
 (see component settings for [device_tracker](https://www.home-assistant.io/components/device_tracker/#configuring-a-device_tracker-platform))  
