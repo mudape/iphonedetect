@@ -10,9 +10,7 @@ device_tracker:
       host_two: 192.168.2.25
 """
 import logging
-import re
 import socket
-import subprocess
 
 import homeassistant.helpers.config_validation as cv
 import homeassistant.util.dt as dt_util
@@ -22,15 +20,18 @@ from homeassistant.components.device_tracker.const import (SCAN_INTERVAL,
                                                            SOURCE_TYPE_ROUTER)
 from homeassistant.const import CONF_HOSTS, CONF_SCAN_INTERVAL
 
+from pyroute2 import IPRoute
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
-    vol.Required(CONF_HOSTS): {cv.string: cv.string},
-    vol.Optional(CONF_SCAN_INTERVAL): cv.time_period,
+        vol.Required(CONF_HOSTS): {cv.string: cv.string},
+        vol.Optional(CONF_SCAN_INTERVAL): cv.time_period,
     }
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+ip = IPRoute()
 
 
 class Host:
@@ -49,34 +50,29 @@ class Host:
         addr = (self.ip_address, 5353)
         message = b'Steve Jobs'
         aSocket.sendto(message, addr)
-    
+
+        result = ()
+
         try:
-            output = subprocess.check_output('ip neigh show to ' + self.ip_address, shell=True)
-            output = output.decode('utf-8').rstrip()
-            _LOGGER.debug(f'ip n output for {self.dev_id} is: {output}')
-        except subprocess.CalledProcessError:
-            try:
-                output = subprocess.check_output('arp -na|grep ' + self.ip_address, shell=True)
-                output = output.decode('utf-8').rstrip()
-                _LOGGER.debug(f'arp output for {self.dev_id} is: {output}')
-            except subprocess.CalledProcessError:
-                _LOGGER.fatal("Could not probe network")
-                return False
+            result = ip.get_neighbours(dst=self.ip_address)
 
-        mac = re.compile(r'(?:[0-9A-F]{2}[:-]){5}(?:[0-9A-F]{2})', re.IGNORECASE)
+        except Exception as e:
+            _LOGGER.warning(f"Exception: {e.args}")
+            pass
 
-        if re.findall(mac, output):
-            _LOGGER.debug(f"Device {self.dev_id} ({self.ip_address}) is HOME")
+        if result and result[0]["state"] >= 2:
+            _LOGGER.debug(
+                f"Device {self.dev_id} has state {result[0]['state']}")
             return True
-        else:
-            _LOGGER.debug(f"Device {self.dev_id} ({self.ip_address}) is AWAY")
-            return False
+
+        return False
 
     def update(self, see):
         """Update device state by sending one or more ping messages."""
         if self.detectiphone():
             see(dev_id=self.dev_id, source_type=SOURCE_TYPE_ROUTER)
             return True
+
 
 def setup_scanner(hass, config, see, discovery_info=None):
     """Set up the Host objects and return the update function."""
@@ -86,7 +82,7 @@ def setup_scanner(hass, config, see, discovery_info=None):
 
     _LOGGER.debug("Started iphonedetect with interval=%s on hosts: %s",
                   interval, ",".join([host.ip_address for host in hosts]))
-    
+
     def update_interval(now):
         """Update all the hosts on every interval time."""
         try:
