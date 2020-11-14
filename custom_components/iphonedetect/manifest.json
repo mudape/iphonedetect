@@ -4,5 +4,5 @@
   "documentation": "https://github.com/mudape/iphonedetect",
   "dependencies": [],
   "codeowners": ["@mudape"],
-  "requirements": []
+  "requirements": [pyroute2==0.5.14]
 } 
