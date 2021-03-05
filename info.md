@@ -1,18 +1,35 @@
+{% if prerelease %}
+## NB!: This is a Beta version!
+### Changes
+- Re-add fallback to using 'arp'
+{% endif %}
+---
 {% if installed %}
 ## Changes as compared to your installed version:
 
 ### Breaking Changes
-
+{% if version_installed.replace("v", "").replace(".","") | int < 130  %}
+- Support for using 'arp' removed, back soon
+{% endif %}
 ### Changes
-- Remove minimum Home-Assistant release from manifest.json
+{% if version_installed.replace("v", "").replace(".","") | int < 140  %}
+- Re-add fallback to using 'arp'
+{% endif %}
+{% if version_installed.replace("v", "").replace(".","") | int < 130  %}
+- Ping all devices, then scan once per intervall
+{% endif %}
 
 ### Features
-- Add [Hassfest](https://developers.home-assistant.io/blog/2020/04/16/hassfest/)  
+{% if version_installed.replace("v", "").replace(".","") | int < 140  %}
+- Add ip attribute
+- GitHub Action add version to manifest.json
+{% endif %}
+---
 {% endif %}  
 Tracks iPhone's connected to local wifi, even when they are in deep sleep.  
 
 ### Requirements
-You have to assign <b>static</b> ip address(es) to your iPhone('s), probably in your router.  
+You should assign <b>static</b> ip address(es) to your iPhone('s), probably in your router.  
 
 ### Configuration
 Add to configuration.yaml
