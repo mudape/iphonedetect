@@ -7,7 +7,7 @@ The iPhone responds, _even when in deep sleep_, and an entry in the arp cache is
 Uses Home Assistant's [device_tracker](https://www.home-assistant.io/components/device_tracker/) and idea/script from [return01](https://community.home-assistant.io/u/return01)
 
 Only **ip addresses** will work, _no hostnames_!  
-You have to assign a **static** ip address(es) to your iPhones, probably in your router. 
+You have to assign a **static** IP address(es) to your iPhones, probably in your router. 
 
 _The interval_seconds time must be shorter than the timeout in which the arp cache is cleared (usally 15-45sec), or the phone will be marked not_home._
 _So, leave it at the default value (12sec) or make it shorter._
