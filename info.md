@@ -26,10 +26,10 @@
 {% endif %}
 ---
 {% endif %}  
-Tracks iPhone's connected to local wifi, even when they are in deep sleep.  
+Tracks iPhones connected to local wifi, even when they are in deep sleep.  
 
 ### Requirements
-You should assign <b>static</b> ip address(es) to your iPhone('s), probably in your router.  
+You have to assign <b>static</b> IP address(es) to your iPhone(s), probably in your router.  
 
 ### Configuration
 Add to configuration.yaml
