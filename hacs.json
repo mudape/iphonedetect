@@ -1,7 +1,6 @@
 {
   "name": "iPhone Device Tracker",
-  "homeassistant": "0.94.0",
-  "iot_class": "Local Polling",
+  "homeassistant": "2022.4.0",
   "domains": ["device_tracker"],
   "zip_release": true,
   "filename": "iphonedetect.zip"
