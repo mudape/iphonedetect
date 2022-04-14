@@ -1,129 +1,124 @@
-"""
-From : https://community.home-assistant.io/t/iphone-device-tracker-on-linux/13698
-Tracks iPhones by sending a udp message to port 5353.
-An entry in the arp cache is then made and checked.
+"""Device Tracker platform for iPhone Detect."""
+from typing import Optional
+from datetime import timedelta
 
-device_tracker:
-  - platform: iphonedetect
-    hosts:
-      host_one: 192.168.2.12
-      host_two: 192.168.2.25
-
-"""
-import logging
-import socket
-import subprocess
-
-import homeassistant.helpers.config_validation as cv
-import homeassistant.util.dt as dt_util
-import voluptuous as vol
-from homeassistant.components.device_tracker import PLATFORM_SCHEMA
-from homeassistant.components.device_tracker.const import (SCAN_INTERVAL,
-                                                           SOURCE_TYPE_ROUTER,
-                                                           ATTR_IP)
-from homeassistant.const import CONF_HOSTS, CONF_SCAN_INTERVAL
-
-from .const import (
-    HOME_STATES,
-    CONST_MESSAGE,
-    CONST_MESSAGE_PORT,
+from homeassistant.components.device_tracker import SOURCE_TYPE_ROUTER
+from homeassistant.components.device_tracker.config_entry import ScannerEntity
+from homeassistant.components.device_tracker.const import (
+    CONF_CONSIDER_HOME,
 )
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_IP_ADDRESS
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
+from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {
-        vol.Required(CONF_HOSTS): {cv.string: cv.string},
-        vol.Optional(CONF_SCAN_INTERVAL): cv.time_period,
-    }
-)
+from .const import DOMAIN, DEFAULT_SCAN_INTERVAL
+from .scanner import IphoneDetectScanner
 
-_LOGGER = logging.getLogger(__name__)
+from homeassistant.helpers.typing import ConfigType
 
-REACHABLE_DEVICES = []
-
-class Host:
-    """Host object with arp detection."""
-
-    def __init__(self, dev_id, dev_ip):
-        """Initialize the Host."""
-        self.dev_id = dev_id
-        self.dev_ip = dev_ip
-
-    def ping_device(self):
-        """Send UDP message to probe device."""
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            s.settimeout(1)
-            s.sendto(CONST_MESSAGE, (self.dev_ip, CONST_MESSAGE_PORT))
-        _LOGGER.debug(f"Probe sent to {self.dev_id} on {self.dev_ip}")
-
-    def update_device(self, see):
-        """Update tracked devices"""
-        if self.dev_ip in REACHABLE_DEVICES:
-            _LOGGER.debug(f"Device {self.dev_id} on {self.dev_ip} is HOME")
-            see(dev_id=self.dev_id,
-            attributes = {ATTR_IP: self.dev_ip},
-            source_type=SOURCE_TYPE_ROUTER)
-        else:
-            _LOGGER.debug(f"Device {self.dev_id} on {self.dev_ip} is AWAY")
-
-    @staticmethod
-    def find_with_ip():
-        """Queries the network neighbours and lists found IP's"""
-        state_filter = " nud " + " nud ".join(HOME_STATES.values()).lower()
-        cmd = f"ip neigh show {state_filter}".split()
-        neighbours = subprocess.run(cmd, shell=False, capture_output=True, text=True)
-        neighbours_ip = [_.split()[0] for _ in neighbours.stdout.splitlines()]
-        return neighbours_ip
-
-    @staticmethod
-    def find_with_arp():
-        """Queries the arp table and lists found IP's"""
-        cmd = "arp -na"
-        neighbours = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-        neighbours_ip = [_.split()[1][1:-1] for _ in neighbours.stdout.splitlines() if _.count(":") == 5]
-        return neighbours_ip
-
-def setup_scanner(hass, config, see, discovery_info=None):
-    """Set up the Host objects and return the update function."""
-
-    if subprocess.run("which ip", shell=True, stdout=subprocess.DEVNULL).returncode == 0:
-        _LOGGER.debug("Using 'IP' to find tracked devices")
-        _use_cmd_ip = True
-    elif subprocess.run("which arp", shell=True, stdout=subprocess.DEVNULL).returncode == 0:
-        _LOGGER.warn("Using 'ARP' to find tracked devices")
-        _use_cmd_ip = False
-    else:
-        _LOGGER.fatal("Can't get neighbours from host OS!")
-        return
-
-    hosts = [Host(dev_id, dev_ip) for (dev_id, dev_ip) in
-             config[CONF_HOSTS].items()]
-    interval = config.get(CONF_SCAN_INTERVAL, SCAN_INTERVAL)
-
-    _LOGGER.info("Started iphonedetect with interval=%s on hosts: %s",
-                  interval, ", ".join([host.dev_ip for host in hosts]))
+SCAN_INTERVAL = timedelta(seconds=DEFAULT_SCAN_INTERVAL)
 
 
-    def update_interval(now):
-        """Update all the hosts on every interval time."""
-        try:
-            for host in hosts:
-                Host.ping_device(host)
-
-            global REACHABLE_DEVICES
-            if _use_cmd_ip:
-                REACHABLE_DEVICES = Host.find_with_ip()
-            else:
-                REACHABLE_DEVICES = Host.find_with_arp()
-
-            for host in hosts:
-                Host.update_device(host, see)
-
-        except Exception as e:
-            _LOGGER.error(e)
-
-        finally:
-            hass.helpers.event.track_point_in_utc_time(
-                update_interval, dt_util.utcnow() + interval)
-
-    update_interval(None)
+async def async_setup_scanner(
+    hass: HomeAssistant,
+    config: ConfigType,
+    async_see,
+    discovery_info=None,
+) -> bool:
+    """For the legacy tracker, if configuration.yaml still being used."""
     return True
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Setup device tracker for iPhone Detect."""
+
+    async_add_entities([IphoneDetectScannerEntity(entry)], update_before_add=True)
+
+
+class IphoneDetectScannerEntity(ScannerEntity):
+    """Representation of a tracked device."""
+
+    def __init__(self, entry: ConfigEntry) -> None:
+        """Init."""
+        self._mac_address: str = entry.data[CONNECTION_NETWORK_MAC]
+        self._ip_address: str = entry.data[CONF_IP_ADDRESS]
+        self._name: str = entry.title
+        self._unique_id: str = entry.entry_id
+
+        self._is_connected: Optional[bool] = None
+
+        self.last_seen: timedelta = dt_util.utcnow() - timedelta(days=365)
+        self._consider_home_time: int = entry.options[CONF_CONSIDER_HOME]
+
+    async def async_update(self):
+        """Update data."""
+
+        now = dt_util.utcnow()
+        self.last_seen = await IphoneDetectScanner.probe_device(
+            self.ip_address, self.last_seen
+        )
+        self._last_home = int((now - self.last_seen).total_seconds())
+        self._is_connected = self._last_home <= self._consider_home_time
+
+    @property
+    def name(self) -> str:
+        """Return the name of the entity."""
+        return self._name
+
+    @property
+    def mac_address(self) -> str:
+        """Return MAC address for this entity."""
+        return self._mac_address
+
+    @property
+    def unique_id(self) -> str:
+        """Return a unique id to use for this entity."""
+        return self._unique_id
+
+    @property
+    def ip_address(self) -> str:
+        """Return IP address of entity."""
+        return self._ip_address
+
+    @property
+    def icon(self):
+        """Return the default icon for the entity."""
+        if self.is_connected:
+            return "mdi:access-point-network"
+        return "mdi:access-point-network-off"
+
+    @property
+    def source_type(self) -> str:
+        """Return the source type."""
+        return SOURCE_TYPE_ROUTER
+
+    @property
+    def is_connected(self) -> bool:
+        """Return if entity is considered connected to the network."""
+        return self._is_connected
+
+    @property
+    def extra_state_attributes(self):
+        """Return the state attributes."""
+        return {
+            CONF_CONSIDER_HOME: self._consider_home_time,
+        }
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device information about this entity."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.unique_id)},
+            name=self.name,
+            connections={
+                (CONNECTION_NETWORK_MAC, self.mac_address),
+            },
+        )
