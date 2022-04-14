@@ -2,7 +2,6 @@
     "config": {
         "step": {
             "user": {
-                "title": "iPhone Device Tracker",
                 "description": "If you need help with the configuration have a look here: https://github.com/mudape/iphonedetect",
                 "data": {
                     "ip_address": "IP Address",
@@ -19,10 +18,7 @@
     "options": {
         "step": {
             "user": {
-                "description": "Device options",
                 "data": {
-                    "ip_address": "IP Address",
-                    "interval_seconds": "Scan interval (sec)",
                     "consider_home": "Consider Home (sec)"
                 },
                 "data_description": {
