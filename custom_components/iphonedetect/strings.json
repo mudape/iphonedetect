@@ -2,7 +2,6 @@
     "config": {
         "step": {
             "user": {
-                "title": "iPhone Device Tracker",
                 "description": "If you need help with the configuration have a look here: https://github.com/mudape/iphonedetect",
                 "data": {
                     "ip_address": "[%key:common::config_flow::data::ip%]",
@@ -19,11 +18,8 @@
     "options": {
         "step": {
             "user": {
-                "description": "Device options",
                 "data": {
-                    "ip_address": "[%key:common::config_flow::data::ip%]",
-                    "interval_seconds": "Scan interval (sec)",
-                    "consider_home": "Consider Home intervals"
+                    "consider_home": "Consider Home interval"
                 },
                 "data_description": {
                     "consider_home": "Time to wait before marking a device as not home"
