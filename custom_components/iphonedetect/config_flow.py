@@ -74,7 +74,7 @@ class IphoneDetectFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             devices = [
-                dev.options[CONF_IP_ADDRESS] for dev in self._async_current_entries()
+                dev.data[CONF_IP_ADDRESS] for dev in self._async_current_entries()
             ]
             subnet = await async_get_network(self.hass)
             ip = user_input[CONF_IP_ADDRESS]
