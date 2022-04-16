@@ -31,27 +31,29 @@ from .scanner import IphoneDetectScanner
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the integration from configuration.yaml (DEPRECATED)."""
 
-    for entry in config[DEVICE_TRACKER]:
+    if DEVICE_TRACKER in config:
 
-        if entry[CONF_PLATFORM] == DOMAIN:
-            con_home = int(entry.get(CONF_CONSIDER_HOME, DEFAULT_CONSIDER_HOME))
-            if MIN_CONSIDER_HOME <= con_home >= MAX_CONSIDER_HOME:
-                con_home = MAX_CONSIDER_HOME \
-                    if con_home > MAX_CONSIDER_HOME \
-                        else MIN_CONSIDER_HOME
+        for entry in config[DEVICE_TRACKER]:
 
-            for host, ip in entry[CONF_HOSTS].items():
-                hass.async_create_task(
-                    hass.config_entries.flow.async_init(
-                        DOMAIN,
-                        context={CONF_SOURCE: SOURCE_IMPORT},
-                        data={
-                            CONF_HOST: host,
-                            CONF_IP_ADDRESS: ip,
-                            CONF_CONSIDER_HOME: con_home,
-                        },
+            if entry[CONF_PLATFORM] == DOMAIN:
+                con_home = int(entry.get(CONF_CONSIDER_HOME, DEFAULT_CONSIDER_HOME))
+                if MIN_CONSIDER_HOME <= con_home >= MAX_CONSIDER_HOME:
+                    con_home = MAX_CONSIDER_HOME \
+                        if con_home > MAX_CONSIDER_HOME \
+                            else MIN_CONSIDER_HOME
+
+                for host, ip in entry[CONF_HOSTS].items():
+                    hass.async_create_task(
+                        hass.config_entries.flow.async_init(
+                            DOMAIN,
+                            context={CONF_SOURCE: SOURCE_IMPORT},
+                            data={
+                                CONF_HOST: host,
+                                CONF_IP_ADDRESS: ip,
+                                CONF_CONSIDER_HOME: con_home,
+                            },
+                        )
                     )
-                )
 
     return True
 
