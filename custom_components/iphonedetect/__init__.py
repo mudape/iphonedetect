@@ -1,5 +1,6 @@
 """iPhone Device Tracker"""
 from __future__ import annotations
+from datetime import timedelta
 from homeassistant.config_entries import ConfigEntry, SOURCE_IMPORT
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
@@ -37,7 +38,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
             if entry[CONF_PLATFORM] == DOMAIN:
                 if CONF_CONSIDER_HOME in entry:
-                    con_home = entry[CONF_CONSIDER_HOME]
+                    con_home = entry[CONF_CONSIDER_HOME].seconds
                     if MIN_CONSIDER_HOME <= con_home >= MAX_CONSIDER_HOME:
                         con_home = (
                             MAX_CONSIDER_HOME
