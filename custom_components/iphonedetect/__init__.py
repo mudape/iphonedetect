@@ -36,11 +36,16 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         for entry in config[DEVICE_TRACKER]:
 
             if entry[CONF_PLATFORM] == DOMAIN:
-                con_home = int(entry.get(CONF_CONSIDER_HOME, DEFAULT_CONSIDER_HOME))
-                if MIN_CONSIDER_HOME <= con_home >= MAX_CONSIDER_HOME:
-                    con_home = MAX_CONSIDER_HOME \
-                        if con_home > MAX_CONSIDER_HOME \
+                if CONF_CONSIDER_HOME in entry:
+                    con_home = entry[CONF_CONSIDER_HOME]
+                    if MIN_CONSIDER_HOME <= con_home >= MAX_CONSIDER_HOME:
+                        con_home = (
+                            MAX_CONSIDER_HOME
+                            if con_home > MAX_CONSIDER_HOME
                             else MIN_CONSIDER_HOME
+                        )
+                else:
+                    con_home = DEFAULT_CONSIDER_HOME
 
                 for host, ip in entry[CONF_HOSTS].items():
                     hass.async_create_task(
