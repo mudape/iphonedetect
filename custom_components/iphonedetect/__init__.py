@@ -38,7 +38,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
             if entry[CONF_PLATFORM] == DOMAIN:
                 if CONF_CONSIDER_HOME in entry:
-                    con_home = entry[CONF_CONSIDER_HOME].seconds
+                    con_home = entry[CONF_CONSIDER_HOME]
+                    if isinstance(con_home, timedelta):
+                        con_home = con_home.seconds
+                        
                     if MIN_CONSIDER_HOME <= con_home >= MAX_CONSIDER_HOME:
                         con_home = (
                             MAX_CONSIDER_HOME
