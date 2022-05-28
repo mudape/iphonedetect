@@ -15,7 +15,8 @@ UDP_MSG = b"Steve Jobs"
 
 def ping_device(ip: str) -> None:
     """Send UDP message to IP."""
-    socket.socket(socket.AF_INET, socket.SOCK_DGRAM).sendto(UDP_MSG, (ip, UDP_PORT))
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.sendto(UDP_MSG, (ip, UDP_PORT))
 
 
 class IphoneDetectScanner:
@@ -29,7 +30,8 @@ class IphoneDetectScanner:
         ping_device(ip)
 
         # Return the device state
-        _nud = IPRoute().get_neighbours(dst=ip)[0].get("state", 32)
+        with IPRoute() as ipr:
+            _nud = ipr.get_neighbours(dst=ip)[0].get("state", 32)
 
         if CONF_NUD_STATE[_nud]["home"]:
             seen = now
