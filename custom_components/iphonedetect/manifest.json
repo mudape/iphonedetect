@@ -9,5 +9,5 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/mudape/iphonedetect/issues",
   "requirements": [],
-  "version": "1.4.0"
+  "version": "1.4.1"
 }
