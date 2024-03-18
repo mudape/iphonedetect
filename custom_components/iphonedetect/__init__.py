@@ -73,10 +73,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up integration."""
     hass.data.setdefault(DOMAIN, {})
 
-    if CONNECTION_NETWORK_MAC not in entry.data:
-        _mac = await IphoneDetectScanner.get_mac_address(entry.data[CONF_IP_ADDRESS])
+    if CONNECTION_NETWORK_MAC not in entry.data or entry.data[CONNECTION_NETWORK_MAC] is None:
+        _mac = await IphoneDetectScanner.get_mac_address(hass, entry.data[CONF_IP_ADDRESS])
         if _mac is None:
-            _LOGGER.error("No MAC address found for IP: %s", entry.data[CONF_IP_ADDRESS])   
+            _LOGGER.error("No MAC address found for IP: %s", entry.data[CONF_IP_ADDRESS])
             raise ConfigEntryNotReady("No MAC address found yet")
         else:
             data = dict(entry.data)

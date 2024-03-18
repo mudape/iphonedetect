@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ipaddress import IPv4Address, IPv4Network, AddressValueError, ip_interface
 from typing import Any, List
+import logging 
 
 import voluptuous as vol
 
@@ -18,6 +19,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 
 from .const import (
     DOMAIN,
@@ -26,8 +28,11 @@ from .const import (
     MAX_CONSIDER_HOME,
 )
 
+from .scanner import IphoneDetectScanner
 
-async def validate_input(subnets: List[IPv4Network], devices: list, ip: str) -> dict:
+_LOGGER = logging.getLogger(__name__)
+
+async def validate_ip_address(subnets: List[IPv4Network], devices: list, ip: str) -> dict:
     """Try to validate user input"""
     errors = {}
 
@@ -80,7 +85,7 @@ class IphoneDetectFlowHandler(ConfigFlow, domain=DOMAIN):
             subnets = await async_get_networks(self.hass)
             ip = user_input[CONF_IP_ADDRESS]
 
-            errors = await validate_input(subnets, devices, ip)
+            errors = await validate_ip_address(subnets, devices, ip)
 
             if not errors:
                 return self.async_create_entry(
@@ -134,7 +139,6 @@ class IphoneDetectFlowHandler(ConfigFlow, domain=DOMAIN):
         return IphoneDetectOptionsFlowHandler(config_entry)
 
 
-   
 class IphoneDetectOptionsFlowHandler(OptionsFlow):
     """iPhone Detect config flow options handler."""
 
@@ -155,29 +159,40 @@ class IphoneDetectOptionsFlowHandler(OptionsFlow):
             current_ip = self.config_entry.data.get(CONF_IP_ADDRESS)
 
             if new_ip and new_ip != current_ip:
-                other_entries = [entry for entry in self.hass.config_entries.async_entries(DOMAIN)
-                                if entry.entry_id != self.config_entry.entry_id]
 
+                other_entries = [
+                    entry for entry in self.hass.config_entries.async_entries(DOMAIN)
+                        if entry.entry_id != self.config_entry.entry_id
+                ]
                 devices = [entry.data[CONF_IP_ADDRESS] for entry in other_entries]
                 subnets = await async_get_networks(self.hass)
-                validation_errors = await validate_input(subnets, devices, new_ip)  
+
+                validation_errors = await validate_ip_address(subnets, devices, new_ip)  
                 if validation_errors:
                     errors.update(validation_errors)
                 else:
-                    # Update the entry with the new IP address if validation passes
+                    updated_data = {CONF_IP_ADDRESS: new_ip}
+
+                    _mac = await IphoneDetectScanner.get_mac_address(self.hass, new_ip)
+                    updated_data[CONNECTION_NETWORK_MAC] = _mac
+
+                    if _mac is None:
+                        _LOGGER.error("No MAC address found for IP: %s", new_ip)
+                    
                     self.hass.config_entries.async_update_entry(
                         self.config_entry,
-                        data={**self.config_entry.data, CONF_IP_ADDRESS: new_ip}
+                        data = self.config_entry.data | updated_data,
+                        options = self.config_entry.options | user_input
                     )
                     await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+
                     return self.async_create_entry(title="", data=user_input)
             else:
-                await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                self.hass.config_entries.async_update_entry(
+                        self.config_entry,
+                        options = self.config_entry.options | user_input
+                )
                 return self.async_create_entry(title="", data=user_input)
-
-        options = {**self.config_entry.options}
-        if user_input:
-            options.update(user_input)
 
         return self.async_show_form(
             step_id="user",
@@ -189,8 +204,11 @@ class IphoneDetectOptionsFlowHandler(OptionsFlow):
                     ): str,
                     vol.Required(
                         CONF_CONSIDER_HOME,
-                        default=options.get(CONF_CONSIDER_HOME, DEFAULT_CONSIDER_HOME),
-                    ): vol.All(vol.Coerce(int), vol.Range(min=MIN_CONSIDER_HOME, max=MAX_CONSIDER_HOME)),
+                        default=self.config_entry.options.get(CONF_CONSIDER_HOME),
+                    ): vol.All(
+                        vol.Coerce(int),
+                        vol.Range(min=MIN_CONSIDER_HOME, max=MAX_CONSIDER_HOME),
+                    ),
                 }
             ),
             errors=errors,
