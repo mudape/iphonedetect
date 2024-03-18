@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from ipaddress import IPv4Address, IPv4Network, AddressValueError, ip_interface
-from typing import Any
+from typing import Any, List
 
 import voluptuous as vol
 
@@ -27,7 +27,7 @@ from .const import (
 )
 
 
-async def validate_input(subnet: IPv4Network, devices: list, ip: str) -> dict:
+async def validate_input(subnets: List[IPv4Network], devices: list, ip: str) -> dict:
     """Try to validate user input"""
     errors = {}
 
@@ -36,29 +36,30 @@ async def validate_input(subnet: IPv4Network, devices: list, ip: str) -> dict:
 
     if not errors:
         try:
-            IPv4Address(ip)
+            ip_address = IPv4Address(ip)
         except AddressValueError:
             errors["base"] = "ip_invalid"
+            return errors
 
     if not errors:
-        if not IPv4Address(ip) in subnet:
+        if not any(ip_address in subnet for subnet in subnets):
             errors["base"] = "ip_range"
 
     return errors
 
 
-async def async_get_network(hass: HomeAssistant) -> IPv4Network:
-    """Search adapters for the network."""
-
+async def async_get_networks(hass: HomeAssistant) -> List[IPv4Network]:
+    """Search adapters for the networks."""
+    networks = []
     local_ip = await network.async_get_source_ip(hass, MDNS_TARGET_IP)
-    network_prefix = 24
+
     for adapter in await network.async_get_adapters(hass):
         for ipv4 in adapter["ipv4"]:
-            if ipv4["address"] == local_ip:
+            if ipv4["address"] == local_ip or ipv4["address"] is not None:
                 network_prefix = ipv4["network_prefix"]
-                break
-
-    return ip_interface(f"{local_ip}/{network_prefix}").network
+                networks.append(ip_interface(f"{ipv4['address']}/{network_prefix}").network)
+   
+    return networks
 
 
 class IphoneDetectFlowHandler(ConfigFlow, domain=DOMAIN):
@@ -76,10 +77,10 @@ class IphoneDetectFlowHandler(ConfigFlow, domain=DOMAIN):
             devices = [
                 dev.data[CONF_IP_ADDRESS] for dev in self._async_current_entries()
             ]
-            subnet = await async_get_network(self.hass)
+            subnets = await async_get_networks(self.hass)
             ip = user_input[CONF_IP_ADDRESS]
 
-            errors = await validate_input(subnet, devices, ip)
+            errors = await validate_input(subnets, devices, ip)
 
             if not errors:
                 return self.async_create_entry(
