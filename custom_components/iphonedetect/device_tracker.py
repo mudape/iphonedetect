@@ -2,7 +2,7 @@
 from typing import Optional
 from datetime import timedelta
 
-from homeassistant.components.device_tracker import SOURCE_TYPE_ROUTER
+from homeassistant.components.device_tracker import SourceType
 from homeassistant.components.device_tracker.config_entry import ScannerEntity
 from homeassistant.components.device_tracker.const import (
     CONF_CONSIDER_HOME,
@@ -98,7 +98,7 @@ class IphoneDetectScannerEntity(ScannerEntity):
     @property
     def source_type(self) -> str:
         """Return the source type."""
-        return SOURCE_TYPE_ROUTER
+        return SourceType.ROUTER
 
     @property
     def is_connected(self) -> bool:
