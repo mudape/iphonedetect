@@ -134,6 +134,7 @@ class IphoneDetectFlowHandler(ConfigFlow, domain=DOMAIN):
         return IphoneDetectOptionsFlowHandler(config_entry)
 
 
+   
 class IphoneDetectOptionsFlowHandler(OptionsFlow):
     """iPhone Detect config flow options handler."""
 
@@ -145,25 +146,52 @@ class IphoneDetectOptionsFlowHandler(OptionsFlow):
         """Manage the options."""
         return await self.async_step_user(user_input)
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Handle options flow."""
-
+        errors = {}
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            
+            new_ip = user_input.get(CONF_IP_ADDRESS)
+            current_ip = self.config_entry.data.get(CONF_IP_ADDRESS)
+
+            if new_ip and new_ip != current_ip:
+                other_entries = [entry for entry in self.hass.config_entries.async_entries(DOMAIN)
+                                if entry.entry_id != self.config_entry.entry_id]
+
+                devices = [entry.data[CONF_IP_ADDRESS] for entry in other_entries]
+                subnets = await async_get_networks(self.hass)
+                validation_errors = await validate_input(subnets, devices, new_ip)  
+                if validation_errors:
+                    errors.update(validation_errors)
+                else:
+                    # Update the entry with the new IP address if validation passes
+                    self.hass.config_entries.async_update_entry(
+                        self.config_entry,
+                        data={**self.config_entry.data, CONF_IP_ADDRESS: new_ip}
+                    )
+                    await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                    return self.async_create_entry(title="", data=user_input)
+            else:
+                await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                return self.async_create_entry(title="", data=user_input)
+
+        options = {**self.config_entry.options}
+        if user_input:
+            options.update(user_input)
 
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
                 {
                     vol.Required(
+                        CONF_IP_ADDRESS, 
+                        default=self.config_entry.data.get(CONF_IP_ADDRESS)
+                    ): str,
+                    vol.Required(
                         CONF_CONSIDER_HOME,
-                        default=self.config_entry.options.get(CONF_CONSIDER_HOME),
-                    ): vol.All(
-                        vol.Coerce(int),
-                        vol.Range(min=MIN_CONSIDER_HOME, max=MAX_CONSIDER_HOME),
-                    ),
+                        default=options.get(CONF_CONSIDER_HOME, DEFAULT_CONSIDER_HOME),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=MIN_CONSIDER_HOME, max=MAX_CONSIDER_HOME)),
                 }
             ),
+            errors=errors,
         )
