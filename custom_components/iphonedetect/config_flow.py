@@ -111,7 +111,7 @@ class IphoneDetectFlowHandler(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_import(self, import_config):
+    async def async_step_import(self, import_config) -> FlowResult:
         """Import from config."""
 
         self._async_abort_entries_match({CONF_HOST: import_config[CONF_HOST]})
@@ -140,7 +140,7 @@ class IphoneDetectOptionsFlowHandler(OptionsFlow):
         """Initialize options flow."""
         self.config_entry = config_entry
 
-    async def async_step_init(self, user_input=None):
+    async def async_step_init(self, user_input=None) -> FlowResult:
         """Manage the options."""
         return await self.async_step_user(user_input)
 
