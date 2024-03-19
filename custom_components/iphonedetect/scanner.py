@@ -38,11 +38,11 @@ class IphoneDetectScanner:
         await async_ping_device(ip)
 
         # Return the device state
-        try:
-            with closing(IPRoute()) as ipr:
+        with closing(IPRoute()) as ipr:
+            try:
                 _nud = ipr.get_neighbours(dst=ip)[0].get("state", nud_fallback)
-        except Exception:
-            _nud = nud_fallback
+            except Exception:
+                _nud = nud_fallback
 
         if CONF_NUD_STATE[_nud]["home"]:
             seen = dt_util.utcnow()
@@ -54,11 +54,11 @@ class IphoneDetectScanner:
         """Return MAC address."""
         await async_ping_device(ip)
 
-        try:
-            with closing(IPRoute()) as ipr:
+        with closing(IPRoute()) as ipr:
+            try:
                 probe = list(ipr.get_neighbours(dst=ip)[0]["attrs"])
                 mac = list(v for k, v in probe if k == "NDA_LLADDR")[0]
-        except Exception:
-            mac = None
+            except Exception:
+                mac = None
 
         return mac
