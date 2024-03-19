@@ -2,7 +2,6 @@
 from contextlib import closing
 
 import socket
-import asyncio
 
 from pyroute2 import IPRoute
 
