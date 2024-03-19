@@ -106,7 +106,7 @@ class IphoneDetectScannerEntity(ScannerEntity):
         return self._is_connected
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self) -> dict[str, int]:
         """Return the state attributes."""
         return {
             CONF_CONSIDER_HOME: self._consider_home_time,
