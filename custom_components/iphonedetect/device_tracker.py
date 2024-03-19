@@ -2,7 +2,7 @@
 from typing import Optional
 from datetime import timedelta
 
-from homeassistant.components.device_tracker import SOURCE_TYPE_ROUTER
+from homeassistant.components.device_tracker import SourceType
 from homeassistant.components.device_tracker.config_entry import ScannerEntity
 from homeassistant.components.device_tracker.const import (
     CONF_CONSIDER_HOME,
@@ -58,7 +58,7 @@ class IphoneDetectScannerEntity(ScannerEntity):
         self.last_seen: timedelta = dt_util.utcnow() - timedelta(days=365)
         self._consider_home_time: int = entry.options[CONF_CONSIDER_HOME]
 
-    async def async_update(self):
+    async def async_update(self) -> None:
         """Update data."""
 
         now = dt_util.utcnow()
@@ -98,7 +98,7 @@ class IphoneDetectScannerEntity(ScannerEntity):
     @property
     def source_type(self) -> str:
         """Return the source type."""
-        return SOURCE_TYPE_ROUTER
+        return SourceType.ROUTER
 
     @property
     def is_connected(self) -> bool:
