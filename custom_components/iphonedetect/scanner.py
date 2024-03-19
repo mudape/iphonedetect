@@ -15,11 +15,6 @@ from .const import CONF_NUD_STATE
 UDP_PORT = 5353
 UDP_MSG = b"Steve Jobs"
 
-async def async_ping_device(ip: str) -> None:
-    """Send UDP message to IP asynchronously."""
-    loop = asyncio.get_running_loop()
-    await loop.run_in_executor(None, ping_device, ip)
-
 
 def ping_device(ip: str) -> None:
     """Send UDP message to IP."""
@@ -35,7 +30,7 @@ class IphoneDetectScanner:
         """Ping device and return NUD state."""
         nud_fallback = 32
 
-        await async_ping_device(ip)
+        ping_device(ip)
 
         # Return the device state
         with closing(IPRoute()) as ipr:
@@ -52,7 +47,7 @@ class IphoneDetectScanner:
     @staticmethod
     async def get_mac_address(ip: str) -> str:
         """Return MAC address."""
-        await async_ping_device(ip)
+        ping_device(ip)
 
         with closing(IPRoute()) as ipr:
             try:
