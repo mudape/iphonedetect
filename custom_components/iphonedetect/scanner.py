@@ -1,6 +1,8 @@
 """iPhone Detect Scanner."""
-from dataclasses import dataclass
+from contextlib import closing
+
 import socket
+
 from pyroute2 import IPRoute
 
 from datetime import datetime
@@ -25,16 +27,19 @@ class IphoneDetectScanner:
     @staticmethod
     async def probe_device(ip: str, seen: datetime) -> datetime:
         """Ping device and return NUD state."""
-        now = dt_util.utcnow()
+        nud_fallback = 32
 
         ping_device(ip)
 
         # Return the device state
-        with IPRoute() as ipr:
-            _nud = ipr.get_neighbours(dst=ip)[0].get("state", 32)
+        with closing(IPRoute()) as ipr:
+            try:
+                _nud = ipr.get_neighbours(dst=ip)[0].get("state", nud_fallback)
+            except Exception:
+                _nud = nud_fallback
 
         if CONF_NUD_STATE[_nud]["home"]:
-            seen = now
+            seen = dt_util.utcnow()
 
         return seen
 
@@ -43,10 +48,11 @@ class IphoneDetectScanner:
         """Return MAC address."""
         ping_device(ip)
 
-        try:
-            probe = list(IPRoute().get_neighbours(dst=ip)[0]["attrs"])
-            mac = list(v for k, v in probe if k == "NDA_LLADDR")[0]
-        except IndexError:
-            mac = None
+        with closing(IPRoute()) as ipr:
+            try:
+                probe = list(ipr.get_neighbours(dst=ip)[0]["attrs"])
+                mac = list(v for k, v in probe if k == "NDA_LLADDR")[0]
+            except Exception:
+                mac = None
 
         return mac
