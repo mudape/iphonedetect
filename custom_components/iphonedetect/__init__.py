@@ -1,92 +1,61 @@
 """iPhone Device Tracker"""
-from __future__ import annotations
-from datetime import timedelta
-import logging 
-from homeassistant.config_entries import ConfigEntry, SOURCE_IMPORT
+
+from dataclasses import dataclass
+import logging
+
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_IP_ADDRESS, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 from homeassistant.helpers.typing import ConfigType
 
-from homeassistant.components.device_tracker.const import (
-    DOMAIN as DEVICE_TRACKER,
-    CONF_CONSIDER_HOME,
-)
-from homeassistant.const import (
-    CONF_HOST,
-    CONF_HOSTS,
-    CONF_IP_ADDRESS,
-    CONF_PLATFORM,
-    CONF_SOURCE,
-)
-
-from .const import (
-    DEFAULT_CONSIDER_HOME,
-    DOMAIN,
-    MAX_CONSIDER_HOME,
-    MIN_CONSIDER_HOME,
-    PLATFORMS,
-)
-from .scanner import IphoneDetectScanner
+from .const import CONF_PROBE_ARP, CONF_PROBE_IP_NEIGH, CONF_PROBE_IPROUTE, DOMAIN
+from .coordinator import IphoneDetectUpdateCoordinator
+from .scanner import _select_probe, ProbeNud, ProbeSubprocess
 
 _LOGGER = logging.getLogger(__name__)
 
+PLATFORMS = [Platform.DEVICE_TRACKER]
 
+@dataclass(slots=True)
+class IphoneDetectDomainData:
+    """DomainData Dataclass."""
+
+    probe: str | None
+    coordinators: dict[str, IphoneDetectUpdateCoordinator]
+
+    
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Set up the integration from configuration.yaml (DEPRECATED)."""
-
-    if DEVICE_TRACKER in config:
-
-        for entry in config[DEVICE_TRACKER]:
-
-            if entry[CONF_PLATFORM] == DOMAIN:
-                if CONF_CONSIDER_HOME in entry:
-                    con_home = entry[CONF_CONSIDER_HOME]
-                    if isinstance(con_home, timedelta):
-                        con_home = con_home.seconds
-
-                    # Corrected logic to enforce con_home within the allowed range
-                    if con_home < MIN_CONSIDER_HOME:
-                        con_home = MIN_CONSIDER_HOME
-                    elif con_home > MAX_CONSIDER_HOME:
-                        con_home = MAX_CONSIDER_HOME
-                else:
-                    con_home = DEFAULT_CONSIDER_HOME
-
-                for host, ip in entry[CONF_HOSTS].items():
-                    hass.async_create_task(
-                        hass.config_entries.flow.async_init(
-                            DOMAIN,
-                            context={CONF_SOURCE: SOURCE_IMPORT},
-                            data={
-                                CONF_HOST: host,
-                                CONF_IP_ADDRESS: ip,
-                                CONF_CONSIDER_HOME: con_home,
-                            },
-                        )
-                    )
+    """Set up the integration."""
+    hass.data[DOMAIN] = IphoneDetectDomainData(
+        probe = await _select_probe(),
+        coordinators = {}
+    )
 
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up integration."""
-    hass.data.setdefault(DOMAIN, {})
+    """Set up config entries."""
+    data: IphoneDetectDomainData = hass.data[DOMAIN]
+    ip: str = entry.options[CONF_IP_ADDRESS]
 
-    if CONNECTION_NETWORK_MAC not in entry.data or entry.data[CONNECTION_NETWORK_MAC] is None:
-        _mac = await IphoneDetectScanner.get_mac_address(hass, entry.data[CONF_IP_ADDRESS])
-        if _mac is None:
-            _LOGGER.error("No MAC address found for IP: %s", entry.data[CONF_IP_ADDRESS])
-            raise ConfigEntryNotReady("No MAC address found yet")
-        else:
-            data = dict(entry.data)
-            data[CONNECTION_NETWORK_MAC] = _mac
-            hass.config_entries.async_update_entry(entry, data=data)
+    if data.probe is None:
+        raise ConfigEntryNotReady("Can't find a tool to use for probing devices.")
+    elif data.probe == CONF_PROBE_IPROUTE:
+        probe_cls = ProbeNud(hass, ip, None)
+    elif data.probe == CONF_PROBE_IP_NEIGH:
+        probe_cls = ProbeSubprocess(hass, ip, CONF_PROBE_IP_NEIGH)
+    else:
+        probe_cls = ProbeSubprocess(hass, ip, CONF_PROBE_ARP)
 
-    hass.data[DOMAIN][entry.entry_id] = entry.entry_id
+    coordinator = IphoneDetectUpdateCoordinator(hass, probe_cls)
+    await coordinator.async_config_entry_first_refresh()
 
-    entry.async_on_unload(entry.add_update_listener(async_update_options))
+    data.coordinators[entry.entry_id] = coordinator
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    entry.async_on_unload(entry.add_update_listener(async_reload_options))
 
     return True
 
@@ -95,11 +64,31 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Handle removal of an entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        hass.data[DOMAIN].coordinators.pop(entry.entry_id)
 
     return unload_ok
 
 
-async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_reload_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Update options."""
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+    """Migrate old config entry to a new format."""
+
+    if config_entry.version == 1:
+        _LOGGER.debug("Migrating from version 1")
+        # Move IP address from data to option so its easier to change in UI
+        new_options = config_entry.options.copy()
+        if config_entry.data.get(CONF_IP_ADDRESS):
+            new_options[CONF_IP_ADDRESS] = config_entry.data[CONF_IP_ADDRESS]
+
+        # Set unique_id
+        new_unique_id = config_entry.unique_id
+        if not new_unique_id:
+            new_unique_id = f"{DOMAIN}_{config_entry.title}".lower()
+
+        hass.config_entries.async_update_entry(config_entry, unique_id=new_unique_id, data={}, options=new_options, version=2)
+
+    return True
