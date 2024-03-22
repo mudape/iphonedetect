@@ -1,8 +1,9 @@
 """Device Tracker platform for iPhone Detect."""
 from typing import Optional
 from datetime import timedelta
+import logging
 
-from homeassistant.components.device_tracker import SOURCE_TYPE_ROUTER
+from homeassistant.components.device_tracker import SourceType
 from homeassistant.components.device_tracker.config_entry import ScannerEntity
 from homeassistant.components.device_tracker.const import (
     CONF_CONSIDER_HOME,
@@ -21,6 +22,8 @@ from .scanner import IphoneDetectScanner
 from homeassistant.helpers.typing import ConfigType
 
 SCAN_INTERVAL = timedelta(seconds=DEFAULT_SCAN_INTERVAL)
+
+_LOGGER = logging.getLogger(__name__)   
 
 
 async def async_setup_scanner(
@@ -60,13 +63,12 @@ class IphoneDetectScannerEntity(ScannerEntity):
 
     async def async_update(self):
         """Update data."""
-
-        now = dt_util.utcnow()
-        self.last_seen = await IphoneDetectScanner.probe_device(
-            self.ip_address, self.last_seen
-        )
-        self._last_home = int((now - self.last_seen).total_seconds())
-        self._is_connected = self._last_home <= self._consider_home_time
+        try:
+            now = dt_util.utcnow()
+            self.last_seen = await IphoneDetectScanner.probe_device(self.hass, self._ip_address, self.last_seen)
+            self._is_connected = (now - self.last_seen) <= timedelta(seconds=self._consider_home_time)
+        except Exception as e:
+            _LOGGER.error("Error updating iPhoneDetect entity: %s", e)  
 
     @property
     def name(self) -> str:
@@ -98,7 +100,7 @@ class IphoneDetectScannerEntity(ScannerEntity):
     @property
     def source_type(self) -> str:
         """Return the source type."""
-        return SOURCE_TYPE_ROUTER
+        return SourceType.ROUTER
 
     @property
     def is_connected(self) -> bool:

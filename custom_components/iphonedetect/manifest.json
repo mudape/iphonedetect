@@ -9,5 +9,5 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/mudape/iphonedetect/issues",
   "requirements": ["pyroute2==0.7.5"],
-  "version": "2.0.0"
+  "version": "2.1.0"
 }

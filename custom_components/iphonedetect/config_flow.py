@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 from ipaddress import IPv4Address, IPv4Network, AddressValueError, ip_interface
-from typing import Any
+from typing import Any, List
+import logging 
 
 import voluptuous as vol
 
@@ -18,6 +19,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 
 from .const import (
     DOMAIN,
@@ -26,8 +28,11 @@ from .const import (
     MAX_CONSIDER_HOME,
 )
 
+from .scanner import IphoneDetectScanner
 
-async def validate_input(subnet: IPv4Network, devices: list, ip: str) -> dict:
+_LOGGER = logging.getLogger(__name__)
+
+async def validate_ip_address(subnets: List[IPv4Network], devices: list, ip: str) -> dict:
     """Try to validate user input"""
     errors = {}
 
@@ -36,29 +41,30 @@ async def validate_input(subnet: IPv4Network, devices: list, ip: str) -> dict:
 
     if not errors:
         try:
-            IPv4Address(ip)
+            ip_address = IPv4Address(ip)
         except AddressValueError:
             errors["base"] = "ip_invalid"
+            return errors
 
     if not errors:
-        if not IPv4Address(ip) in subnet:
+        if not any(ip_address in subnet for subnet in subnets):
             errors["base"] = "ip_range"
 
     return errors
 
 
-async def async_get_network(hass: HomeAssistant) -> IPv4Network:
-    """Search adapters for the network."""
-
+async def async_get_networks(hass: HomeAssistant) -> List[IPv4Network]:
+    """Search adapters for the networks."""
+    networks = []
     local_ip = await network.async_get_source_ip(hass, MDNS_TARGET_IP)
-    network_prefix = 24
+
     for adapter in await network.async_get_adapters(hass):
         for ipv4 in adapter["ipv4"]:
-            if ipv4["address"] == local_ip:
+            if ipv4["address"] == local_ip or ipv4["address"] is not None:
                 network_prefix = ipv4["network_prefix"]
-                break
-
-    return ip_interface(f"{local_ip}/{network_prefix}").network
+                networks.append(ip_interface(f"{ipv4['address']}/{network_prefix}").network)
+   
+    return networks
 
 
 class IphoneDetectFlowHandler(ConfigFlow, domain=DOMAIN):
@@ -76,10 +82,10 @@ class IphoneDetectFlowHandler(ConfigFlow, domain=DOMAIN):
             devices = [
                 dev.data[CONF_IP_ADDRESS] for dev in self._async_current_entries()
             ]
-            subnet = await async_get_network(self.hass)
+            subnets = await async_get_networks(self.hass)
             ip = user_input[CONF_IP_ADDRESS]
 
-            errors = await validate_input(subnet, devices, ip)
+            errors = await validate_ip_address(subnets, devices, ip)
 
             if not errors:
                 return self.async_create_entry(
@@ -144,18 +150,58 @@ class IphoneDetectOptionsFlowHandler(OptionsFlow):
         """Manage the options."""
         return await self.async_step_user(user_input)
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Handle options flow."""
-
+        errors = {}
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            
+            new_ip = user_input.get(CONF_IP_ADDRESS)
+            current_ip = self.config_entry.data.get(CONF_IP_ADDRESS)
+
+            if new_ip and new_ip != current_ip:
+
+                other_entries = [
+                    entry for entry in self.hass.config_entries.async_entries(DOMAIN)
+                        if entry.entry_id != self.config_entry.entry_id
+                ]
+                devices = [entry.data[CONF_IP_ADDRESS] for entry in other_entries]
+                subnets = await async_get_networks(self.hass)
+
+                validation_errors = await validate_ip_address(subnets, devices, new_ip)  
+                if validation_errors:
+                    errors.update(validation_errors)
+                else:
+                    updated_data = {CONF_IP_ADDRESS: new_ip}
+
+                    _mac = await IphoneDetectScanner.get_mac_address(self.hass, new_ip)
+                    updated_data[CONNECTION_NETWORK_MAC] = _mac
+
+                    if _mac is None:
+                        _LOGGER.error("No MAC address found for IP: %s", new_ip)
+                    
+                    self.hass.config_entries.async_update_entry(
+                        self.config_entry,
+                        data = self.config_entry.data | updated_data,
+                        options = self.config_entry.options | user_input
+                    )
+                    await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+
+                    return self.async_create_entry(title="", data=user_input)
+            else:
+                self.hass.config_entries.async_update_entry(
+                        self.config_entry,
+                        options = self.config_entry.options | user_input
+                )
+                return self.async_create_entry(title="", data=user_input)
 
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
                 {
+                    vol.Required(
+                        CONF_IP_ADDRESS, 
+                        default=self.config_entry.data.get(CONF_IP_ADDRESS)
+                    ): str,
                     vol.Required(
                         CONF_CONSIDER_HOME,
                         default=self.config_entry.options.get(CONF_CONSIDER_HOME),
@@ -165,4 +211,5 @@ class IphoneDetectOptionsFlowHandler(OptionsFlow):
                     ),
                 }
             ),
+            errors=errors,
         )

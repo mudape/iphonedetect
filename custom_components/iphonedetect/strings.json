@@ -19,12 +19,18 @@
         "step": {
             "user": {
                 "data": {
+                    "ip_address": "Device IP Address",
                     "consider_home": "Consider Home interval"
                 },
                 "data_description": {
                     "consider_home": "Time to wait before marking a device as not home"
                 }
             }
+        },
+        "error": {
+            "ip_already_configured": "IP address already in use by other entity",
+            "ip_invalid": "Invalid IP address",
+            "ip_range": "IP not in range of HASS subnet"            
         }
     }
 }

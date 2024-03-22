@@ -1,6 +1,7 @@
 """iPhone Device Tracker"""
 from __future__ import annotations
 from datetime import timedelta
+import logging 
 from homeassistant.config_entries import ConfigEntry, SOURCE_IMPORT
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
@@ -28,6 +29,8 @@ from .const import (
 )
 from .scanner import IphoneDetectScanner
 
+_LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the integration from configuration.yaml (DEPRECATED)."""
@@ -41,13 +44,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     con_home = entry[CONF_CONSIDER_HOME]
                     if isinstance(con_home, timedelta):
                         con_home = con_home.seconds
-                        
-                    if MIN_CONSIDER_HOME <= con_home >= MAX_CONSIDER_HOME:
-                        con_home = (
-                            MAX_CONSIDER_HOME
-                            if con_home > MAX_CONSIDER_HOME
-                            else MIN_CONSIDER_HOME
-                        )
+
+                    # Corrected logic to enforce con_home within the allowed range
+                    if con_home < MIN_CONSIDER_HOME:
+                        con_home = MIN_CONSIDER_HOME
+                    elif con_home > MAX_CONSIDER_HOME:
+                        con_home = MAX_CONSIDER_HOME
                 else:
                     con_home = DEFAULT_CONSIDER_HOME
 
@@ -71,9 +73,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up integration."""
     hass.data.setdefault(DOMAIN, {})
 
-    if CONNECTION_NETWORK_MAC not in entry.data:
-        _mac = await IphoneDetectScanner.get_mac_address(entry.data[CONF_IP_ADDRESS])
+    if CONNECTION_NETWORK_MAC not in entry.data or entry.data[CONNECTION_NETWORK_MAC] is None:
+        _mac = await IphoneDetectScanner.get_mac_address(hass, entry.data[CONF_IP_ADDRESS])
         if _mac is None:
+            _LOGGER.error("No MAC address found for IP: %s", entry.data[CONF_IP_ADDRESS])
             raise ConfigEntryNotReady("No MAC address found yet")
         else:
             data = dict(entry.data)
