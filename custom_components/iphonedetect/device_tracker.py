@@ -1,29 +1,23 @@
 """Device Tracker platform for iPhone Detect."""
-from typing import Optional
-from datetime import timedelta
-import logging
 
-from homeassistant.components.device_tracker import SourceType
-from homeassistant.components.device_tracker.config_entry import ScannerEntity
-from homeassistant.components.device_tracker.const import (
+from datetime import datetime, timedelta
+
+from homeassistant.components.device_tracker import (
     CONF_CONSIDER_HOME,
+    ScannerEntity,
+    SourceType,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_IP_ADDRESS
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.const import CONF_IP_ADDRESS, EVENT_HOMEASSISTANT_STARTED
+from homeassistant.core import Event, HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, DEFAULT_SCAN_INTERVAL
-from .scanner import IphoneDetectScanner
-
-from homeassistant.helpers.typing import ConfigType
-
-SCAN_INTERVAL = timedelta(seconds=DEFAULT_SCAN_INTERVAL)
-
-_LOGGER = logging.getLogger(__name__)   
+from .const import DOMAIN
+from .coordinator import IphoneDetectUpdateCoordinator
+from .helpers import _run_import
 
 
 async def async_setup_scanner(
@@ -33,6 +27,12 @@ async def async_setup_scanner(
     discovery_info=None,
 ) -> bool:
     """For the legacy tracker, if configuration.yaml still being used."""
+
+    # Helper for hopefully cleaner import (from Ping integration)
+    hass.bus.async_listen_once(
+        EVENT_HOMEASSISTANT_STARTED, _run_import(Event, hass, config)
+    )
+
     return True
 
 
@@ -42,43 +42,31 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Setup device tracker for iPhone Detect."""
+    coordinator = hass.data[DOMAIN].coordinators[entry.entry_id]
+    async_add_entities(
+        [IphoneDetectDeviceTracker(entry, coordinator)]
+    )
 
-    async_add_entities([IphoneDetectScannerEntity(entry)], update_before_add=True)
 
-
-class IphoneDetectScannerEntity(ScannerEntity):
+class IphoneDetectDeviceTracker(
+    CoordinatorEntity[IphoneDetectUpdateCoordinator], ScannerEntity
+):
     """Representation of a tracked device."""
+    
+    _last_seen: datetime | None = None
 
-    def __init__(self, entry: ConfigEntry) -> None:
+    def __init__(
+        self, config_entry: ConfigEntry, coordinator: IphoneDetectUpdateCoordinator
+    ) -> None:
         """Init."""
-        self._mac_address: str = entry.data[CONNECTION_NETWORK_MAC]
-        self._ip_address: str = entry.data[CONF_IP_ADDRESS]
-        self._name: str = entry.title
-        self._unique_id: str = entry.entry_id
+        super().__init__(coordinator)
 
-        self._is_connected: Optional[bool] = None
-
-        self.last_seen: timedelta = dt_util.utcnow() - timedelta(days=365)
-        self._consider_home_time: int = entry.options[CONF_CONSIDER_HOME]
-
-    async def async_update(self):
-        """Update data."""
-        try:
-            now = dt_util.utcnow()
-            self.last_seen = await IphoneDetectScanner.probe_device(self.hass, self._ip_address, self.last_seen)
-            self._is_connected = (now - self.last_seen) <= timedelta(seconds=self._consider_home_time)
-        except Exception as e:
-            _LOGGER.error("Error updating iPhoneDetect entity: %s", e)  
-
-    @property
-    def name(self) -> str:
-        """Return the name of the entity."""
-        return self._name
-
-    @property
-    def mac_address(self) -> str:
-        """Return MAC address for this entity."""
-        return self._mac_address
+        self._attr_name = config_entry.title
+        self._ip_address = config_entry.options[CONF_IP_ADDRESS]
+        self._unique_id = config_entry.entry_id
+        self._consider_home_interval = timedelta(
+            seconds=config_entry.options[CONF_CONSIDER_HOME]
+        )
 
     @property
     def unique_id(self) -> str:
@@ -89,13 +77,7 @@ class IphoneDetectScannerEntity(ScannerEntity):
     def ip_address(self) -> str:
         """Return IP address of entity."""
         return self._ip_address
-
-    @property
-    def icon(self):
-        """Return the default icon for the entity."""
-        if self.is_connected:
-            return "mdi:access-point-network"
-        return "mdi:access-point-network-off"
+        # return self.coordinator.data.ip_address
 
     @property
     def source_type(self) -> str:
@@ -105,22 +87,15 @@ class IphoneDetectScannerEntity(ScannerEntity):
     @property
     def is_connected(self) -> bool:
         """Return if entity is considered connected to the network."""
-        return self._is_connected
+        if self.coordinator.data.is_alive:
+            self._last_seen = dt_util.utcnow()
 
-    @property
-    def extra_state_attributes(self):
-        """Return the state attributes."""
-        return {
-            CONF_CONSIDER_HOME: self._consider_home_time,
-        }
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return device information about this entity."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self.unique_id)},
-            name=self.name,
-            connections={
-                (CONNECTION_NETWORK_MAC, self.mac_address),
-            },
+        return (
+            self._last_seen is not None
+            and (dt_util.utcnow() - self._last_seen) < self._consider_home_interval
         )
+
+    @property
+    def entity_registry_enabled_default(self) -> bool:
+        """Return if entity is enabled by default."""
+        return True
