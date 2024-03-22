@@ -15,6 +15,7 @@ from .scanner import _select_probe, ProbeNud, ProbeSubprocess
 
 _LOGGER = logging.getLogger(__name__)
 
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 PLATFORMS = [Platform.DEVICE_TRACKER]
 
 @dataclass(slots=True)
