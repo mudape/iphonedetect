@@ -21,6 +21,10 @@ from homeassistant.components.device_tracker import PLATFORM_SCHEMA, SourceType
 from homeassistant.components.device_tracker.const import (SCAN_INTERVAL,
                                                            ATTR_IP)
 from homeassistant.const import CONF_HOSTS, CONF_SCAN_INTERVAL
+from homeassistant.helpers.event import track_point_in_utc_time
+
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.event import track_point_in_utc_time
 
 from .const import (
     HOME_STATES,
@@ -81,7 +85,7 @@ class Host:
         neighbours_ip = [_.split()[1][1:-1] for _ in neighbours.stdout.splitlines() if _.count(":") == 5]
         return neighbours_ip
 
-def setup_scanner(hass, config, see, discovery_info=None):
+def setup_scanner(hass: HomeAssistant, config, see, discovery_info=None):
     """Set up the Host objects and return the update function."""
 
     if subprocess.run("which ip", shell=True, stdout=subprocess.DEVNULL).returncode == 0:
@@ -121,8 +125,8 @@ def setup_scanner(hass, config, see, discovery_info=None):
             _LOGGER.error(e)
 
         finally:
-            hass.helpers.event.track_point_in_utc_time(
-                update_interval, dt_util.utcnow() + interval)
+            track_point_in_utc_time(
+                hass, update_interval, dt_util.utcnow() + interval)
 
     update_interval(None)
     return True
