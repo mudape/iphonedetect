@@ -110,7 +110,10 @@ def setup_scanner(hass: HomeAssistant, config, see, discovery_info=None):
         """Update all the hosts on every interval time."""
         try:
             for host in hosts:
-                Host.ping_device(host)
+                try:
+                    Host.ping_device(host)
+                except Exception as e:
+                    _LOGGER.error(f"Failed to ping {host}", e)
 
             global REACHABLE_DEVICES
             if _use_cmd_ip:
