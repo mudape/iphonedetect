@@ -5,14 +5,25 @@
                 "description": "If you need help with the configuration have a look here: https://github.com/mudape/iphonedetect",
                 "data": {
                     "name": "Name",
+                    "ip_address": "IP Address",
+                    "consider_home": "Consider Home interval (sec)"
+                },
+                "data_description": {
+                    "consider_home": "Time to wait before marking a device as not home"
+                }
+            },
+            "reconfigure": {
+                "description": "Update configuration for {device_name}.\n",
+                "data": {
                     "ip_address": "IP Address"
                 }
             }
         },
         "abort": {
             "already_configured": "Device is already configured",
-            "unknown": "Unexpected error"
-          },
+            "unknown": "Unexpected error",
+            "reconfigure_successful": "Re-configuration was successful"
+        },
         "error": {
             "ip_already_configured": "IP address already in use by other entity",
             "ip_invalid": "Not a valid IP address",
@@ -22,8 +33,8 @@
     "options": {
         "step": {
             "user": {
+                "description": "Increase the time if the device falsely marks itself as not home.\n",
                 "data": {
-                    "ip_address": "IP Address",
                     "consider_home": "Consider Home (sec)"
                 },
                 "data_description": {
@@ -32,8 +43,8 @@
             }
         },
         "error": {
-            "ip_already_configured": "IP address already in use by other entity",
-            "ip_invalid": "Not a valid IP address",
+            "ip_already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+            "ip_invalid": "[%key:common::config_flow::error::invalid_host%]",
             "ip_range": "IP not in range of HASS subnets"
         }
     }
