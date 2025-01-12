@@ -19,7 +19,7 @@ from homeassistant.const import (
     CONF_SOURCE,
 )
 from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN
-from homeassistant.core import Event, HomeAssistant
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
 from homeassistant.helpers.typing import ConfigType
@@ -30,13 +30,12 @@ from .const import (
     DOMAIN,
     MAX_CONSIDER_HOME,
     MIN_CONSIDER_HOME,
-    NAME,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def _run_import(_: Event, hass: HomeAssistant, config: ConfigType) -> None:
+async def _run_import(hass: HomeAssistant, config: ConfigType) -> None:
     """Delete devices from known_device.yaml and import them via config flow."""
     _LOGGER.debug("Home Assistant successfully started, importing config entries now")
 
@@ -90,13 +89,13 @@ async def _run_import(_: Event, hass: HomeAssistant, config: ConfigType) -> None
             hass,
             HOMEASSISTANT_DOMAIN,
             f"deprecated_yaml_{DOMAIN}",
-            # breaks_in_ha_version="2024.6.0",
             is_fixable=False,
             issue_domain=DOMAIN,
+            learn_more_url="https://github.com/mudape/iphonedetect",
             severity=IssueSeverity.WARNING,
             translation_key="deprecated_yaml",
             translation_placeholders={
                 "domain": DOMAIN,
-                "integration_title": NAME,
+                "integration_title": "iPhone Device Tracker",
             },
         )

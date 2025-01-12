@@ -1,183 +1,167 @@
 """iPhone Detect Scanner."""
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import socket
-from contextlib import closing, suppress
+from contextlib import closing
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Protocol, Sequence
 
-from homeassistant.core import HomeAssistant
-
+from homeassistant.util import dt as dt_util
 from pyroute2 import IPRoute
 
-from .const import (
-    CONF_PROBE_ARP, 
-    CONF_PROBE_IP_NEIGH, 
-    CONF_PROBE_IPROUTE,
-)
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
 
 _LOGGER = logging.getLogger(__name__)
 
-UDP_PORT = 5353
-UDP_MSG = b"Steve Jobs"
-
-NUD_FALLBACK = 32
-NUD_STATES = {
-    0: {"state": "None", "consider_home": False},
-    1: {"state": "Incomplete", "consider_home": False},
-    2: {"state": "Reachable", "consider_home": True},
-    4: {"state": "Stale", "consider_home": True},
-    8: {"state": "Delay", "consider_home": True},
-    16: {"state": "Probe", "consider_home": False},
-    32: {"state": "Failed", "consider_home": False},
-    64: {"state": "Noarp", "consider_home": False},
-    128: {"state": "Permanent", "consider_home": True},
-}
+CMD_IP_NEIGH = "ip -4 neigh show nud reachable"
+CMD_ARP = "arp -ne"
 
 
-async def _select_probe() -> str|None:
-    """Checks and returns which probe that can be used."""
-    try:
-        with closing(IPRoute()):
-            ...
-        _LOGGER.debug("Using IPRoute as probe")
-        return CONF_PROBE_IPROUTE
-    except Exception:
-        _LOGGER.debug("Could not use IPRoute. Trying with IP Neigh")
-        try:
-            prober = await asyncio.create_subprocess_exec(
-                *["which","ip"],
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                close_fds=False,
-            )
-            await prober.wait()
-            if prober.returncode == 0:
-                _LOGGER.debug("Using IP Neigh as probe")
-                return CONF_PROBE_IP_NEIGH
-            else:
-                _LOGGER.debug("Could not use IP Neigh. Trying with ARP")
-                prober = await asyncio.create_subprocess_exec(
-                    *["which", "arp"],
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                    close_fds=False,
-                )
-                await prober.wait()
-                if prober.returncode == 0:
-                    _LOGGER.debug("Using ARP as probe")
-                    return CONF_PROBE_ARP
-                else:
-                    _LOGGER.fatal("Can't find a tool to use for probing devices.")
-                    raise Exception
-        except Exception:
-            return None
+@dataclass(slots=True, kw_only=True)
+class DeviceData:
+    ip_address: str
+    consider_home: timedelta
+    title: str
+    _reachable: bool = False
+    _last_seen: datetime | None = None
 
 
-async def async_message_device(hass: HomeAssistant, ip: str) -> None:
-    """Send UDP message to IP asynchronously."""
-    _LOGGER.debug(f"Sending 'ping' to {ip!r}")
-
-    def send_msg():
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            s.sendto(UDP_MSG, (ip, UDP_PORT))
-
-    await hass.async_add_executor_job(
-        send_msg
+async def pinger(loop: asyncio.AbstractEventLoop, ip_addresses: list[str]) -> None:
+    transport, _ = await loop.create_datagram_endpoint(
+        lambda: asyncio.DatagramProtocol(), family=socket.AF_INET
     )
-
-
-class ProbeData:
-    is_alive: bool = False
-
-    def __init__(self, hass: HomeAssistant, ip: str) -> None:
-        self.hass = hass
-        self.ip_address = ip
-
-
-class ProbeSubprocess(ProbeData):
-    """Helper class for getting ARP State."""
-
-    def __init__(self, hass: HomeAssistant, ip: str, cmd: str|None) -> None:
-        """Init."""
-        super().__init__(hass, ip)
-        if cmd == CONF_PROBE_IP_NEIGH:
-            self.cmd = ["ip", "-4", "neigh", "show", "nud", "reachable", "nud", "delay"]
-        elif cmd == CONF_PROBE_ARP:
-            self.cmd = ["arp", "-na"]
-
-    async def _get_state(self) -> bool:
-        """Queries the network neighbours and lists found IP's"""
-        prober = await asyncio.create_subprocess_exec(
-            *self.cmd,
-            self.ip_address,
-            stdin=None,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            close_fds=False,
-        )
+    for ip_address in ip_addresses:
         try:
-            async with asyncio.timeout(2):
-                out_data, out_error = await prober.communicate()
-            
-            if out_data: 
-                _LOGGER.debug(f"Got {out_data!r}")
-                return self.ip_address in str(out_data) and str(out_data).count(":") == 5
-            if out_error:
-                _LOGGER.debug(
-                    "Error of command: `%s`, return code: %s:\n%s",
-                    " ".join(self.cmd),
-                    prober.returncode,
-                    out_error,
-                )
-        except TimeoutError:
-            _LOGGER.debug(f"Timeout waiting for {self.cmd}")
-            if prober:
-                with suppress(TypeError):
-                    await prober.kill()  # type: ignore[func-returns-value]
-                del prober
-            return False
-        except AttributeError:
-            return False
-        
-        return False
+            transport.sendto(b"ping", (ip_address, 5353))
+        except Exception as e:
+            _LOGGER.error(f"Failed to ping {ip_address}", e)
 
-    async def async_update(self) -> None:
-        """Retrieve the latest status from the host."""
-        await async_message_device(self.hass, self.ip_address)
-        self.is_alive = await self._get_state()
-        _LOGGER.debug(f"{self.ip_address!r} is considered home : {self.is_alive}")
+    transport.close()
 
 
+async def get_arp_subprocess(cmd: Sequence) -> list[str]:
+    """Return list of IPv4 devices reachable by the network."""
+    response = []
+    if isinstance(cmd, str):
+        cmd = cmd.split()
 
-class ProbeNud(ProbeData):
-    """Helper class for getting NUD State."""
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd, stdout=asyncio.subprocess.PIPE, close_fds=False
+        )
 
-    def __init__(self, hass: HomeAssistant, ip: str, cmd: str|None = None) -> None:
-        """Init."""
-        super().__init__(hass, ip)
+        async with asyncio.timeout(2):
+            result, _ = await proc.communicate()
+        if result:
+            response = result.decode().splitlines()
+    except Exception as exc:
+        _LOGGER.debug("Exception on ARP lookup: %s", exc)
 
-    async def _get_state(self) -> bool:
-        """Retrieve the NUD state of an IP address."""
-        _LOGGER.debug(f"Getting 'nud_state' for {self.ip_address!r}")
+    return response
+
+
+class ScannerException(Exception):
+    """Scanner exception."""
+
+
+class Scanner(Protocol):
+    """Scanner class for getting ARP cache records."""
+
+    async def get_arp_records(self, hass: HomeAssistant) -> list[str]:
+        """Return list of IPv4 devices reachable by the network."""
+        return []
+
+
+class ScannerIPRoute:
+    """Get ARP cache records using pyroute2."""
+
+    def _get_arp_records(self) -> list[str]:
+        """Return list of IPv4 devices reachable by the network."""
+        response = []
         try:
             with closing(IPRoute()) as ipr:
-                nud_state = ipr.get_neighbours(dst=self.ip_address)[0].get(
-                    "state", NUD_FALLBACK
+                result = ipr.get_neighbours(
+                    family=socket.AF_INET, match=lambda x: x["state"] == 2
                 )
-        except IndexError:
-            _LOGGER.warning(f"No NUD state found for IP: {self.ip_address!r}")
-            nud_state = NUD_FALLBACK
+            response = [dev["attrs"][0][1] for dev in result]
+        except Exception as exc:
+            _LOGGER.debug("Exception on ARP lookup: %s", exc)
 
-        _LOGGER.debug(
-            f"Got 'nud_state' {NUD_STATES[nud_state]!r} for {self.ip_address!r}"
-        )
-        return NUD_STATES[nud_state]["consider_home"]
+        return response
 
-    async def async_update(self) -> None:
-        """Retrieve the latest status from the host."""
-        await async_message_device(self.hass, self.ip_address)
-        self.is_alive = await self._get_state()
-        _LOGGER.debug(f"{self.ip_address!r} is considered home : {self.is_alive}")
+    async def get_arp_records(self, hass: HomeAssistant) -> list[str]:
+        """Return list of IPv4 devices reachable by the network."""
+        response = await hass.async_add_executor_job(self._get_arp_records)
+        return response
 
 
+class ScannerIPNeigh:
+    """Get ARP cache records using subprocess."""
 
+    async def get_arp_records(self, hass: HomeAssistant = None) -> list[str]:
+        """Return list of IPv4 devices reachable by the network."""
+        response = []
+        result = await get_arp_subprocess(CMD_IP_NEIGH.split())
+        if result:
+            response = [row.split()[0] for row in result if row.count(":") == 5]
+
+        return response
+
+
+class ScannerArp:
+    """Get ARP cache records using subprocess."""
+
+    async def get_arp_records(self, hass: HomeAssistant = None) -> list[str]:
+        """Return list of IPv4 devices reachable by the network."""
+        response = []
+        result = await get_arp_subprocess(CMD_ARP.split())
+        if result:
+            response = [row.split()[0] for row in result if row.count(":") == 5]
+
+        return response
+
+
+async def async_update_devices(
+    hass: HomeAssistant, scanner: Scanner, devices: dict[str, DeviceData]
+) -> None:
+    """Update reachability for all tracked devices."""
+    ip_addresses = [device.ip_address for device in devices.values()]
+
+    # Ping devices
+    _LOGGER.debug("Pinging devices: %s", ip_addresses)
+    await pinger(hass.loop, ip_addresses)
+
+    # Get devices found in ARP
+    _LOGGER.debug("Fetching ARP records with %s", scanner.__class__.__name__)
+    arp_records = await scanner.get_arp_records(hass)
+    _LOGGER.debug("ARP response has %d records", len(arp_records))
+
+    # Only keep reachable tracked devices
+    reachable_ip = set(ip_addresses).intersection(arp_records)
+    _LOGGER.debug("Matched %d tracked devices: %s", len(reachable_ip), reachable_ip)
+
+    # Update reachable devices
+    for device in devices.values():
+        device._reachable = device.ip_address in reachable_ip
+        if device._reachable:
+            device._last_seen = dt_util.utcnow()
+
+
+async def async_get_scanner(hass: HomeAssistant) -> Scanner:
+    """Return Scanner to use."""
+
+    if await ScannerIPRoute().get_arp_records(hass):
+        return ScannerIPRoute()
+
+    if await ScannerIPNeigh().get_arp_records():
+        return ScannerIPNeigh()
+
+    if await ScannerArp().get_arp_records():
+        return ScannerArp()
+
+    raise ScannerException("No scanner tool available")
