@@ -2,10 +2,8 @@ import logging
 from datetime import timedelta
 from typing import Any
 
-from homeassistant.components.device_tracker import (
-    CONF_CONSIDER_HOME,
-    DEFAULT_CONSIDER_HOME as DEVICE_TRACKER_DEFAULT_HOME
-)
+from homeassistant.components.device_tracker import CONF_CONSIDER_HOME
+from homeassistant.components.device_tracker import DEFAULT_CONSIDER_HOME as DEVICE_TRACKER_DEFAULT_HOME
 from homeassistant.components.device_tracker.legacy import (
     YAML_DEVICES,
     remove_device_from_config,
@@ -19,37 +17,30 @@ from homeassistant.const import (
     CONF_SOURCE,
 )
 from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN
-from homeassistant.core import Event, HomeAssistant
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
 from homeassistant.helpers.typing import ConfigType
-
 
 from .const import (
     DEFAULT_CONSIDER_HOME,
     DOMAIN,
     MAX_CONSIDER_HOME,
     MIN_CONSIDER_HOME,
-    NAME,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def _run_import(_: Event, hass: HomeAssistant, config: ConfigType) -> None:
+async def _run_import(hass: HomeAssistant, config: ConfigType) -> None:
     """Delete devices from known_device.yaml and import them via config flow."""
     _LOGGER.debug("Home Assistant successfully started, importing config entries now")
 
     devices: dict[str, dict[str, Any]] = {}
     try:
-        devices = await hass.async_add_executor_job(
-            load_yaml_config_file, hass.config.path(YAML_DEVICES)
-        )
+        devices = await hass.async_add_executor_job(load_yaml_config_file, hass.config.path(YAML_DEVICES))
     except (FileNotFoundError, HomeAssistantError):
-        _LOGGER.debug(
-            "No valid known_devices.yaml found, "
-            "skip removal of devices from known_devices.yaml"
-        )
+        _LOGGER.debug("No valid known_devices.yaml found, skip removal of devices from known_devices.yaml")
         return None
 
     for dev_name, dev_host in config[CONF_HOSTS].items():
@@ -90,13 +81,13 @@ async def _run_import(_: Event, hass: HomeAssistant, config: ConfigType) -> None
             hass,
             HOMEASSISTANT_DOMAIN,
             f"deprecated_yaml_{DOMAIN}",
-            # breaks_in_ha_version="2024.6.0",
             is_fixable=False,
             issue_domain=DOMAIN,
+            learn_more_url="https://github.com/mudape/iphonedetect",
             severity=IssueSeverity.WARNING,
             translation_key="deprecated_yaml",
             translation_placeholders={
                 "domain": DOMAIN,
-                "integration_title": NAME,
+                "integration_title": "iPhone Device Tracker",
             },
         )
