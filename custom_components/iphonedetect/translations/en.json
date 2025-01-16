@@ -1,4 +1,10 @@
 {
+    "issues": {
+        "deprecated_yaml_import": {
+          "title": "The YAML configuration is being removed",
+          "description": "Configuring {integration_title} using YAML is being removed.\n\nYour existing YAML configuration has been imported into the UI automatically.\n\nRemove the `{domain}` configuration from your configuration.yaml file and restart Home Assistant to fix this issue."
+        }
+    },    
     "config": {
         "step": {
             "user": {
