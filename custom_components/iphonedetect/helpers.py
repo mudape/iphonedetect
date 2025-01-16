@@ -16,10 +16,10 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_SOURCE,
 )
-from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN
+
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.typing import ConfigType
 
 from .const import (
@@ -77,15 +77,15 @@ async def _run_import(hass: HomeAssistant, config: ConfigType) -> None:
             )
         )
 
-        async_create_issue(
+        ir.async_create_issue(
             hass,
-            HOMEASSISTANT_DOMAIN,
-            f"deprecated_yaml_{DOMAIN}",
+            DOMAIN,
+            "deprecated_yaml_import",
+            breaks_in_ha_version="2025.9.0",
             is_fixable=False,
-            issue_domain=DOMAIN,
             learn_more_url="https://github.com/mudape/iphonedetect",
-            severity=IssueSeverity.WARNING,
-            translation_key="deprecated_yaml",
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="deprecated_yaml_import",
             translation_placeholders={
                 "domain": DOMAIN,
                 "integration_title": "iPhone Device Tracker",
