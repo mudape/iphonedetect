@@ -1,0 +1,15 @@
+name: "HACS Validate"
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  hacs:
+    name: "HACS validation"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: HACS Action
+        uses: "hacs/action@main"
+        with:
+          category: "integration"

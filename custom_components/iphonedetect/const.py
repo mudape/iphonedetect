@@ -1,8 +1,10 @@
-HOME_STATES={
-    2: "REACHABLE",
-    8: "DELAY",
-    # 4: "STALE",
-} 
+"""Constants for the iPhone Device Tracker integration."""
 
-CONST_MESSAGE = b"Marco"
-CONST_MESSAGE_PORT = 5353
+DOMAIN = "iphonedetect"
+
+DEFAULT_CONSIDER_HOME: int = 24
+MAX_CONSIDER_HOME: int = 60
+MIN_CONSIDER_HOME: int = 18
+
+PROBE_INTERVAL: float = 5
+UPDATE_INTERVAL: float = 8

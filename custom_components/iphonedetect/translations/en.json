@@ -1,0 +1,55 @@
+{
+    "issues": {
+        "deprecated_yaml_import": {
+          "title": "The YAML configuration is being removed",
+          "description": "Configuring {integration_title} using YAML is being removed.\n\nYour existing YAML configuration has been imported into the UI automatically.\n\nRemove the `{domain}` configuration from your configuration.yaml file and restart Home Assistant to fix this issue."
+        }
+    },    
+    "config": {
+        "step": {
+            "user": {
+                "description": "Ensure the device has a static IP",
+                "data": {
+                    "name": "Name",
+                    "ip_address": "IP address",
+                    "consider_home": "Consider Home interval (sec)",
+                    "subnet_check": "Check if IP is in a reachable subnet"
+                },
+                "data_description": {
+                    "name": "Set a unique name for the entity",
+                    "consider_home": "Time to wait before marking a device as not home"
+                }
+            },
+            "reconfigure": {
+                "description": "Update configuration for {device_name}.",
+                "data": {
+                    "ip_address": "IP address",
+                    "subnet_check": "Check if IP is in a reachable subnet"
+                }
+            }
+        },
+        "abort": {
+            "already_configured": "Device is already configured",
+            "unknown": "Unexpected error"
+        },
+        "error": {
+            "name_not_unique": "Name not unique, pick another",
+            "ip_already_configured": "IP address already in use by other entity",
+            "ip_invalid": "Not a valid IP address",
+            "ip_range": "IP not in range of HASS subnets"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "description": "Increase the time if the device falsely marks itself as not home.",
+                "data": {
+                    "consider_home": "Consider Home (sec)"
+                },
+                "data_description": {
+                    "consider_home": "Time to wait before marking a device as not home"
+                }
+            }
+        }
+    }
+}

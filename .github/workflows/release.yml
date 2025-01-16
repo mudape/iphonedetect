@@ -5,31 +5,33 @@ on:
     types: [published]
 
 jobs:
-  release_zip_file:
+  release:
     name: Prepare release asset
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v1
-      
-      - name: Get version
-        id: version
-        uses: home-assistant/actions/helpers/version@master
+      - name: ⤵️ Check out code from GitHub
+        uses: actions/checkout@v4
 
-      - name: "Set version number"
+      - name: 🔢 Adjust version number
+        shell: bash
         run: |
-          python3 ${{ github.workspace }}/manage/update_manifest.py --version ${{ steps.version.outputs.version }}
-      
-      - name: ZIP files
+          version="${{ github.event.release.tag_name }}"
+          version="${version,,}"
+          version="${version#v}"
+          yq e -P -o=json \
+            -i ".version = \"${version}\"" \
+            "${{ github.workspace }}/custom_components/iphonedetect/manifest.json"
+
+      - name: 📦 Created zipped release package
         run: |
-          cd /home/runner/work/iphonedetect/iphonedetect/custom_components/iphonedetect
+          cd "${{ github.workspace }}/custom_components/iphonedetect"
           zip iphonedetect.zip -r ./
-      - name: Upload zip to release
-        uses: svenstaro/upload-release-action@v1-release
 
+      - name: ⬆️ Upload zip to release
+        uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: /home/runner/work/iphonedetect/iphonedetect/custom_components/iphonedetect/iphonedetect.zip
+          file: "${{ github.workspace }}/custom_components/iphonedetect/iphonedetect.zip"
           asset_name: iphonedetect.zip
           tag: ${{ github.ref }}
           overwrite: true

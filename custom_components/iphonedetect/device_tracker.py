@@ -1,132 +1,80 @@
-"""
-From : https://community.home-assistant.io/t/iphone-device-tracker-on-linux/13698
-Tracks iPhones by sending a udp message to port 5353.
-An entry in the arp cache is then made and checked.
+"""Device Tracker platform for iPhone Detect."""
 
-device_tracker:
-  - platform: iphonedetect
-    hosts:
-      host_one: 192.168.2.12
-      host_two: 192.168.2.25
+from __future__ import annotations
 
-"""
-import logging
-import socket
-import subprocess
+from typing import TYPE_CHECKING
 
-import homeassistant.helpers.config_validation as cv
-import homeassistant.util.dt as dt_util
-import voluptuous as vol
-from homeassistant.components.device_tracker import PLATFORM_SCHEMA, SourceType
-from homeassistant.components.device_tracker.const import (SCAN_INTERVAL,
-                                                           ATTR_IP)
-from homeassistant.const import CONF_HOSTS, CONF_SCAN_INTERVAL
-from homeassistant.helpers.event import track_point_in_utc_time
-
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.event import track_point_in_utc_time
-
-from .const import (
-    HOME_STATES,
-    CONST_MESSAGE,
-    CONST_MESSAGE_PORT,
+from homeassistant.components.device_tracker import SourceType
+from homeassistant.components.device_tracker.config_entry import BaseTrackerEntity
+from homeassistant.const import (
+    EVENT_HOMEASSISTANT_STARTED,
+    STATE_HOME,
+    STATE_NOT_HOME,
 )
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {
-        vol.Required(CONF_HOSTS): {cv.string: cv.string},
-        vol.Optional(CONF_SCAN_INTERVAL): cv.time_period,
-    }
-)
+from .const import DOMAIN
+from .coordinator import IphoneDetectUpdateCoordinator
+from .helpers import _run_import
 
-_LOGGER = logging.getLogger(__name__)
-
-REACHABLE_DEVICES = []
-
-class Host:
-    """Host object with arp detection."""
-
-    def __init__(self, dev_id, dev_ip):
-        """Initialize the Host."""
-        self.dev_id = dev_id
-        self.dev_ip = dev_ip
-
-    def ping_device(self):
-        """Send UDP message to probe device."""
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            s.settimeout(1)
-            s.sendto(CONST_MESSAGE, (self.dev_ip, CONST_MESSAGE_PORT))
-        _LOGGER.debug(f"Probe sent to {self.dev_id} on {self.dev_ip}")
-
-    def update_device(self, see):
-        """Update tracked devices"""
-        if self.dev_ip in REACHABLE_DEVICES:
-            _LOGGER.debug(f"Device {self.dev_id} on {self.dev_ip} is HOME")
-            see(dev_id=self.dev_id,
-            attributes = {ATTR_IP: self.dev_ip},
-            source_type=SourceType.ROUTER)
-        else:
-            _LOGGER.debug(f"Device {self.dev_id} on {self.dev_ip} is AWAY")
-
-    @staticmethod
-    def find_with_ip():
-        """Queries the network neighbours and lists found IP's"""
-        state_filter = " nud " + " nud ".join(HOME_STATES.values()).lower()
-        cmd = f"ip neigh show {state_filter}".split()
-        neighbours = subprocess.run(cmd, shell=False, capture_output=True, text=True)
-        neighbours_ip = [_.split()[0] for _ in neighbours.stdout.splitlines()]
-        return neighbours_ip
-
-    @staticmethod
-    def find_with_arp():
-        """Queries the arp table and lists found IP's"""
-        cmd = "arp -na"
-        neighbours = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-        neighbours_ip = [_.split()[1][1:-1] for _ in neighbours.stdout.splitlines() if _.count(":") == 5]
-        return neighbours_ip
-
-def setup_scanner(hass: HomeAssistant, config, see, discovery_info=None):
-    """Set up the Host objects and return the update function."""
-
-    if subprocess.run("which ip", shell=True, stdout=subprocess.DEVNULL).returncode == 0:
-        _LOGGER.debug("Using 'IP' to find tracked devices")
-        _use_cmd_ip = True
-    elif subprocess.run("which arp", shell=True, stdout=subprocess.DEVNULL).returncode == 0:
-        _LOGGER.warn("Using 'ARP' to find tracked devices")
-        _use_cmd_ip = False
-    else:
-        _LOGGER.fatal("Can't get neighbours from host OS!")
-        return
-
-    hosts = [Host(dev_id, dev_ip) for (dev_id, dev_ip) in
-             config[CONF_HOSTS].items()]
-    interval = config.get(CONF_SCAN_INTERVAL, SCAN_INTERVAL)
-
-    _LOGGER.info("Started iphonedetect with interval=%s on hosts: %s",
-                  interval, ", ".join([host.dev_ip for host in hosts]))
+if TYPE_CHECKING:
+    from homeassistant.components.device_tracker import AsyncSeeCallback
+    from homeassistant.config_entries import ConfigEntry, DiscoveryInfoType
+    from homeassistant.core import Event, HomeAssistant
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
+    from homeassistant.helpers.typing import ConfigType
 
 
-    def update_interval(now):
-        """Update all the hosts on every interval time."""
-        try:
-            for host in hosts:
-                Host.ping_device(host)
+async def async_setup_scanner(
+    hass: HomeAssistant,
+    config: ConfigType,
+    async_see: AsyncSeeCallback,
+    discovery_info: DiscoveryInfoType | None = None,
+) -> bool:
+    """Import configuration to the new integration."""
 
-            global REACHABLE_DEVICES
-            if _use_cmd_ip:
-                REACHABLE_DEVICES = Host.find_with_ip()
-            else:
-                REACHABLE_DEVICES = Host.find_with_arp()
+    async def schedule_import(_: Event) -> None:
+        """Schedule delayed import after HA is fully started."""
+        await _run_import(hass, config)
 
-            for host in hosts:
-                Host.update_device(host, see)
+    # The legacy device tracker entities will be restored after the legacy device tracker platforms
+    # have been set up, so we can only remove the entities from the state machine then
+    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, schedule_import)
 
-        except Exception as e:
-            _LOGGER.error(e)
-
-        finally:
-            track_point_in_utc_time(
-                hass, update_interval, dt_util.utcnow() + interval)
-
-    update_interval(None)
     return True
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Setup device tracker for iPhone Detect."""
+
+    coordinator: IphoneDetectUpdateCoordinator = hass.data[DOMAIN]["coordinators"][entry.entry_id]
+
+    async_add_entities([IphoneDetectDeviceTracker(entry, coordinator)])
+
+
+class IphoneDetectDeviceTracker(CoordinatorEntity[IphoneDetectUpdateCoordinator], BaseTrackerEntity):
+    """Representation of a tracked device."""
+
+    _attr_source_type: SourceType = SourceType.ROUTER
+    _attr_has_entity_name = True
+
+    def __init__(self, entry: ConfigEntry, coordinator: IphoneDetectUpdateCoordinator) -> None:
+        """Initialize the tracked device."""
+        super().__init__(coordinator)
+
+        self._attr_name = entry.title
+        self._attr_unique_id = entry.entry_id
+
+    @property
+    def state(self) -> str:
+        """Return the state of the device."""
+        return STATE_HOME if self.coordinator.data.is_connected else STATE_NOT_HOME
+
+    @property
+    def entity_registry_enabled_default(self) -> bool:
+        """Return if entity is enabled by default."""
+        return True
