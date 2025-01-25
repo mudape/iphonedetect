@@ -25,8 +25,6 @@ from homeassistant.helpers.typing import ConfigType
 from .const import (
     DEFAULT_CONSIDER_HOME,
     DOMAIN,
-    MAX_CONSIDER_HOME,
-    MIN_CONSIDER_HOME,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -59,10 +57,6 @@ async def _run_import(hass: HomeAssistant, config: ConfigType) -> None:
             con_home = DEFAULT_CONSIDER_HOME
         if isinstance(con_home, timedelta):
             con_home = con_home.seconds
-        if con_home < MIN_CONSIDER_HOME:
-            con_home = MIN_CONSIDER_HOME
-        elif con_home > MAX_CONSIDER_HOME:
-            con_home = MAX_CONSIDER_HOME
 
         # run import after everything has been cleaned up
         hass.async_create_task(

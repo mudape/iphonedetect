@@ -29,8 +29,6 @@ from homeassistant.util import slugify
 from .const import (
     DEFAULT_CONSIDER_HOME,
     DOMAIN,
-    MAX_CONSIDER_HOME,
-    MIN_CONSIDER_HOME,
 )
 
 
@@ -39,10 +37,7 @@ _LOGGER = logging.getLogger(__name__)
 
 OPTIONS_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_CONSIDER_HOME, default=DEFAULT_CONSIDER_HOME): vol.All(
-            vol.Coerce(int),
-            vol.Range(min=MIN_CONSIDER_HOME, max=MAX_CONSIDER_HOME),
-        )
+        vol.Required(CONF_CONSIDER_HOME, default=DEFAULT_CONSIDER_HOME): int
     }
 )
 
