@@ -1,0 +1,55 @@
+{
+    "issues": {
+        "deprecated_yaml_import": {
+          "title": "Konfiguracja YAML Została usunięta",
+          "description": "Konfiguracja {integration_title} używając YAML została usunięta.\n\nTwoja istniejąca konfiguracja YAML została automatycznie zaimportowana do interfejsu użytkownika.\n\nAby rozwiązać ten problem, usuń konfigurację `{domain}` z pliku configuration.yaml i uruchom ponownie Home Assistant."
+        }
+    },    
+    "config": {
+        "step": {
+            "user": {
+                "description": "Upewnij się, że urządzenie ma statyczny adres IP",
+                "data": {
+                    "name": "Nazwa",
+                    "ip_address": "Adres IP",
+                    "consider_home": "Oznacz jako w domu po upływie (sec)",
+                    "subnet_check": "Sprawdź, czy adres IP znajduje się w dostępnej podsieci"
+                },
+                "data_description": {
+                    "name": "Wprowadź unikalną nazwę",
+                    "consider_home": "Czas oczekiwania przed oznaczeniem urządzenia jako nie w domu"
+                }
+            },
+            "reconfigure": {
+                "description": "Uaktualnij konfigurację dla {device_name}.",
+                "data": {
+                    "ip_address": "Adres IP",
+                    "subnet_check": "Sprawdź, czy adres IP znajduje się w dostępnej podsieci"
+                }
+            }
+        },
+        "abort": {
+            "already_configured": "Urządzenie zostało już skonfigurowane",
+            "unknown": "Niespodziewany błąd"
+        },
+        "error": {
+            "name_not_unique": "Nazwa nie jest unikalna. Wybierz inną",
+            "ip_already_configured": "Adres IP jest już używany",
+            "ip_invalid": "Adres IP nie jest poprawny",
+            "ip_range": "Adres IP nie znajduje się w zakresie podsieci HASS"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "description": "Wydłuż czas, jeśli urządzenie błędnie oznaczy się jako nie w domu.",
+                "data": {
+                    "consider_home": "Oznacz jako w domu po upływie (sec)"
+                },
+                "data_description": {
+                    "consider_home": "Czas oczekiwania przed oznaczeniem urządzenia jako nie w domu"
+                }
+            }
+        }
+    }
+}
