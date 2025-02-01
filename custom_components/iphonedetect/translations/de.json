@@ -1,0 +1,55 @@
+{
+    "issues": {
+        "deprecated_yaml_import": {
+          "title": "Die YAML-Konfiguration wird entfernt",
+          "description": "Die Konfiguration von {integration_title} unter Verwendung von YAML wird entfernt.\n\nIhre bestehende YAML-Konfiguration wurde automatisch in die Benutzeroberfläche importiert.\n\nEntfernen Sie die Konfiguration `{domain}` aus Ihrer Datei configuration.yaml und starten Sie Home Assistant neu, um dieses Problem zu beheben."
+        }
+    },    
+    "config": {
+        "step": {
+            "user": {
+                "description": "Stellen Sie sicher, dass das Gerät eine statische IP hat",
+                "data": {
+                    "name": "Name",
+                    "ip_address": "IP-Adresse",
+                    "consider_home": "Als zu Hause betrachten (Sek)",
+                    "subnet_check": "Prüfen, ob IP in einem erreichbaren Subnetz liegt"
+                },
+                "data_description": {
+                    "name": "Geben Sie einen eindeutigen Namen für die Entität ein",
+                    "consider_home": "Zeit, die gewartet wird, bevor ein Gerät als nicht zu Hause betrachtet wird"
+                }
+            },
+            "reconfigure": {
+                "description": "Konfiguration für {device_name} aktualisieren.",
+                "data": {
+                    "ip_address": "IP-Adresse",
+                    "subnet_check": "Prüfen, ob IP in einem erreichbaren Subnetz liegt"
+                }
+            }
+        },
+        "abort": {
+            "already_configured": "Gerät ist bereits konfiguriert",
+            "unknown": "Unerwarteter Fehler"
+        },
+        "error": {
+            "name_not_unique": "Name nicht eindeutig, wählen Sie einen anderen",
+            "ip_already_configured": "IP-Adresse wird bereits von einer anderen Entität verwendet",
+            "ip_invalid": "Keine gültige IP-Adresse",
+            "ip_range": "IP nicht im Bereich der HASS-Subnetze"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "description": "Erhöhe die Zeit, wenn sich das Gerät fälschlicherweise als nicht zu Hause betrachtet.",
+                "data": {
+                    "consider_home": "Als zu Hause betrachten (Sek)"
+                },
+                "data_description": {
+                    "consider_home": "Zeit, die gewartet wird, bevor ein Gerät als nicht zu Hause betrachtet wird"
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,55 @@
+{
+    "issues": {
+        "deprecated_yaml_import": {
+          "title": "Nastavení YAML se odebírá",
+          "description": "Nastavení {integration_title} použité v YAML se odebírá.\n\nVaše existující nastavení v YAML bylo automaticky importováno do UI.\n\nOdeberte nastavení `{domain}` ze souboru configuration.yaml a restartujte Home Assistanta pro opravení tohoto problému."
+        }
+    },    
+    "config": {
+        "step": {
+            "user": {
+                "description": "Ujistěte se, že zařízení má pevnou IP adresu.",
+                "data": {
+                    "name": "Název",
+                    "ip_address": "IP adresa",
+                    "consider_home": "Interval detekce Je doma (sek.)",
+                    "subnet_check": "Zkontrolovat, zda je IP adresa v dosažitelné podsíti"
+                },
+                "data_description": {
+                    "name": "Nastaví unikátní název pro entitu.",
+                    "consider_home": "Doba čekání před označením zařízení jako Není doma"
+                }
+            },
+            "reconfigure": {
+                "description": "Aktualizuje nastavení pro {device_name}.",
+                "data": {
+                    "ip_address": "IP adresa",
+                    "subnet_check": "Zkontrolovat, zda je IP v dosažitelné podsíti"
+                }
+            }
+        },
+        "abort": {
+            "already_configured": "Zařízení je již nastaveno.",
+            "unknown": "Neočekávaná chyba"
+        },
+        "error": {
+            "name_not_unique": "Název není unikátní, vyberte jiný.",
+            "ip_already_configured": "IP adresa je již používána jinou entitou.",
+            "ip_invalid": "Není platná IP adresa.",
+            "ip_range": "IP adresa není v rozsahu podsítě HASS."
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "description": "Zvýšte dobu, pokud zařízení samo sebe nesprávně hlásí ve stavu Není doma.",
+                "data": {
+                    "consider_home": "Interval detekce Je doma (sek.)"
+                },
+                "data_description": {
+                    "consider_home": "Doba čekání před označením zařízení jako Není doma"
+                }
+            }
+        }
+    }
+}
