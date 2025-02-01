@@ -42,7 +42,7 @@
     "options": {
         "step": {
             "init": {
-                "description": "Zvýšte dobu, pokud zařízení samo sebe nesprávně hlásí ve stavu Není doma.",
+                "description": "Zvyšte dobu, pokud zařízení samo sebe nesprávně hlásí ve stavu Není doma.",
                 "data": {
                     "consider_home": "Interval detekce Je doma (sek.)"
                 },
