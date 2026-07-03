@@ -1,6 +1,4 @@
 """Config flow for iPhone Device Tracker integration."""
-
-import logging
 from ipaddress import AddressValueError, IPv4Address, IPv4Network, ip_interface
 from typing import Any
 
@@ -30,10 +28,6 @@ from .const import (
     DEFAULT_CONSIDER_HOME,
     DOMAIN,
 )
-
-
-_LOGGER = logging.getLogger(__name__)
-
 
 OPTIONS_SCHEMA = vol.Schema(
     {
@@ -136,25 +130,6 @@ class IphoneDetectFlowHandler(ConfigFlow, domain=DOMAIN):  # type: ignore
             step_id="user",
             data_schema=self.add_suggested_values_to_schema(DATA_SCHEMA, user_input),
             errors=errors,
-        )
-
-    async def async_step_import(self, import_config) -> FlowResult:
-        """Import from config."""
-        _LOGGER.debug("Importing config '%s'", import_config)
-
-        unique_id = slugify(import_config[CONF_NAME]).lower()
-        await self.async_set_unique_id(f"{DOMAIN}_{unique_id}")
-        self._abort_if_unique_id_configured()
-
-        self._async_abort_entries_match({CONF_NAME: import_config[CONF_NAME]})
-
-        return self.async_create_entry(
-            title=import_config[CONF_NAME],
-            data={},
-            options={
-                CONF_IP_ADDRESS: import_config[CONF_IP_ADDRESS],
-                CONF_CONSIDER_HOME: import_config[CONF_CONSIDER_HOME],
-            },
         )
 
     async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> FlowResult:

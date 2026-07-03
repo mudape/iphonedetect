@@ -2,41 +2,26 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from homeassistant.components.device_tracker import BaseScannerEntity, SourceType
-from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
+from homeassistant.const import (
+    STATE_HOME,
+    STATE_NOT_HOME,
+)
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import IphoneDetectUpdateCoordinator
-from .helpers import _run_import
 
 if TYPE_CHECKING:
-    from homeassistant.components.device_tracker import AsyncSeeCallback
-    from homeassistant.config_entries import ConfigEntry, DiscoveryInfoType
-    from homeassistant.core import Event, HomeAssistant
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
-    from homeassistant.helpers.typing import ConfigType
 
-
-async def async_setup_scanner(
-    hass: HomeAssistant,
-    config: ConfigType,
-    async_see: AsyncSeeCallback,
-    discovery_info: DiscoveryInfoType | None = None,
-) -> bool:
-    """Import configuration to the new integration."""
-
-    async def schedule_import(_: Event) -> None:
-        """Schedule delayed import after HA is fully started."""
-        await _run_import(hass, config)
-
-    # The legacy device tracker entities will be restored after the legacy device tracker platforms
-    # have been set up, so we can only remove the entities from the state machine then
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, schedule_import)
-
-    return True
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -51,7 +36,7 @@ async def async_setup_entry(
     async_add_entities([IphoneDetectDeviceTracker(entry, coordinator)])
 
 
-class IphoneDetectDeviceTracker(CoordinatorEntity[IphoneDetectUpdateCoordinator], BaseScannerEntity):
+class IphoneDetectDeviceTracker(CoordinatorEntity[IphoneDetectUpdateCoordinator], BaseScannerEntity, RestoreEntity):
     """Representation of a tracked device."""
 
     _attr_source_type: SourceType = SourceType.ROUTER
@@ -63,11 +48,31 @@ class IphoneDetectDeviceTracker(CoordinatorEntity[IphoneDetectUpdateCoordinator]
 
         self._attr_name = entry.title
         self._attr_unique_id = entry.entry_id
+        self._restored_state: bool | None = None
+
+    async def async_added_to_hass(self):
+        """Handle entity which will be added to Home Assistant."""
+        await super().async_added_to_hass()
+        state = await self.async_get_last_state()
+        if state and state.state in (STATE_HOME, STATE_NOT_HOME):
+            self._restored_state = state.state == STATE_HOME
+            _LOGGER.debug(
+                "Added '%s' to hass with restored state: %s",
+                self._attr_name,
+                state.state,
+            )
+        else:
+            self._restored_state = None
+            _LOGGER.debug(
+                "Added '%s' to hass with no usable restored state",
+                self._attr_name,
+            )
 
     @property
-    def is_connected(self) -> bool:
-        """Return true if the device is connected to the network."""
-        return self.coordinator.data.is_connected or False
+    def is_connected(self) -> bool | None:
+        """Return the connection state of the device."""
+        current_state = self.coordinator.data.is_connected
+        return current_state if current_state is not None else self._restored_state
 
     @property
     def entity_registry_enabled_default(self) -> bool:
