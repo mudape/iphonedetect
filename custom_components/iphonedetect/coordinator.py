@@ -32,6 +32,7 @@ class IphoneDetectUpdateCoordinator(DataUpdateCoordinator[DeviceConnected]):
     def __init__(self, hass: HomeAssistant, device: DeviceData) -> None:
         """Initialize the coordinator."""
         self.device = device
+        self._not_seen_yet = dt_util.utcnow()
 
         super().__init__(
             hass,
@@ -40,7 +41,7 @@ class IphoneDetectUpdateCoordinator(DataUpdateCoordinator[DeviceConnected]):
             update_interval=timedelta(seconds=UPDATE_INTERVAL),
         )
 
-    def is_connected(self) -> bool:
+    def is_connected(self) -> bool | None:
         """Return if device is considered connected."""
 
         if self.device._reachable:
@@ -59,18 +60,28 @@ class IphoneDetectUpdateCoordinator(DataUpdateCoordinator[DeviceConnected]):
                 return True
             else:
                 _LOGGER.debug(
-                    "Device '%s' (%s) is not home",
+                    "Device '%s' (%s) considered not home",
                     self.device.title,
                     self.device.ip_address,
                 )
                 return False
         else:
             _LOGGER.debug(
-                "Device '%s' (%s) not seen since last restart.",
+                "Device '%s' (%s) not seen since last restart",
                 self.device.title,
                 self.device.ip_address,
             )
-            return False
+            _not_seen: timedelta = dt_util.utcnow() - self._not_seen_yet
+            if _not_seen > self.device.consider_home:
+                _LOGGER.debug(
+                    "Device '%s' (%s) considered not home after HA restart",
+                    self.device.title,
+                    self.device.ip_address,
+                )
+                self.device._last_seen = self._not_seen_yet - self.device.consider_home
+                return False
+
+            return None
 
     async def _async_update_data(self) -> DeviceConnected:
         """Trigger check."""

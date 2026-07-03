@@ -1,6 +1,6 @@
 {
   "name": "iPhone Device Tracker",
-  "homeassistant": "2025.1.0",
+  "homeassistant": "2026.6.7",
   "zip_release": true,
   "filename": "iphonedetect.zip"
 }
