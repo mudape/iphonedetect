@@ -1,0 +1,55 @@
+{
+  "issues": {
+    "deprecated_yaml_import": {
+      "title": "La configuration en YAML a été supprimée",
+      "description": "La configuration de {integration_title} avec YAML a été enlevée.\n\nVotre configuration YAML actuelle a automatiquement été importé sur l'UI.\n\nVous pouvez désormais suppprimer la configuration `{domain}` de votre fichier configuration.yaml et redemmarer Home Assistant pour résoudre ce problème."
+    }
+  },
+  "config": {
+    "step": {
+      "user": {
+        "description": "Assurez vous que l'appareil utilise une IP statique",
+        "data": {
+          "name": "Nom",
+          "ip_address": "Adresse IP",
+          "consider_home": "Délai de détection de présence (s)",
+          "subnet_check": "Vérifier si l'IP appartiens à un sous réseau"
+        },
+        "data_description": {
+          "name": "Choisissez un nom unique pour cette entité",
+          "consider_home": "Temps à attendre avant de déclarer l'appareil comme parti"
+        }
+      },
+      "reconfigure": {
+        "description": "Mettre à jour la configuration de {device_name}.",
+        "data": {
+          "ip_address": "Adresse IP",
+          "subnet_check": "Vérifier si l'IP appartiens à un sous réseau"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "L'appareil est déjà configuré",
+      "unknown": "Erreur inattendue"
+    },
+    "error": {
+      "name_not_unique": "Le nom choisi n'est pas unique, choisissez en un autre",
+      "ip_already_configured": "Cette adresse IP est déjà utilisée par une autre entitée",
+      "ip_invalid": "Adresse IP non valide",
+      "ip_range": "L'IP n'est pas dans la portée des sous réseaux HASS"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "description": "Augmenter cette valeur si l'appareil est faussement identifié comme parti.",
+        "data": {
+          "consider_home": "Délai de détection de présence (s)"
+        },
+        "data_description": {
+          "consider_home": "Temps à attendre avant de déclarer l'appareil comme parti"
+        }
+      }
+    }
+  }
+}
