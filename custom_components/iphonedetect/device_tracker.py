@@ -4,13 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from homeassistant.components.device_tracker import SourceType
-from homeassistant.components.device_tracker.config_entry import BaseTrackerEntity
-from homeassistant.const import (
-    EVENT_HOMEASSISTANT_STARTED,
-    STATE_HOME,
-    STATE_NOT_HOME,
-)
+from homeassistant.components.device_tracker import BaseScannerEntity, SourceType
+from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
@@ -56,7 +51,7 @@ async def async_setup_entry(
     async_add_entities([IphoneDetectDeviceTracker(entry, coordinator)])
 
 
-class IphoneDetectDeviceTracker(CoordinatorEntity[IphoneDetectUpdateCoordinator], BaseTrackerEntity):
+class IphoneDetectDeviceTracker(CoordinatorEntity[IphoneDetectUpdateCoordinator], BaseScannerEntity):
     """Representation of a tracked device."""
 
     _attr_source_type: SourceType = SourceType.ROUTER
@@ -70,9 +65,9 @@ class IphoneDetectDeviceTracker(CoordinatorEntity[IphoneDetectUpdateCoordinator]
         self._attr_unique_id = entry.entry_id
 
     @property
-    def state(self) -> str:
-        """Return the state of the device."""
-        return STATE_HOME if self.coordinator.data.is_connected else STATE_NOT_HOME
+    def is_connected(self) -> bool:
+        """Return true if the device is connected to the network."""
+        return self.coordinator.data.is_connected or False
 
     @property
     def entity_registry_enabled_default(self) -> bool:
