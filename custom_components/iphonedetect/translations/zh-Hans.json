@@ -1,0 +1,55 @@
+{
+    "issues": {
+        "deprecated_yaml_import": {
+          "title": "通过YAML文件配置的方式已被移除",
+          "description": "使用YAML文件配置 {integration_title} 的方式已被移除.\n\n但是已存在的YAML配置会被自动导入到UI.\n\n请从configuration.yaml文件移除 `{domain}` 配置, 并重启Home Assistant修复此问题."
+        }
+    },    
+    "config": {
+        "step": {
+            "user": {
+                "description": "请确保此设备拥有静态IP",
+                "data": {
+                    "name": "名称",
+                    "ip_address": "IP地址",
+                    "consider_home": "检查间隔 (秒)",
+                    "subnet_check": "检查IP是否在可互通的子网内"
+                },
+                "data_description": {
+                    "name": "给实体设置一个唯一名称",
+                    "consider_home": "判断此设备是否在家的检查间隔时间"
+                }
+            },
+            "reconfigure": {
+                "description": "修改 {device_name} 的配置.",
+                "data": {
+                    "ip_address": "IP地址",
+                    "subnet_check": "检查IP是否在可互通的子网内"
+                }
+            }
+        },
+        "abort": {
+            "already_configured": "设备配置已经存在",
+            "unknown": "未知错误"
+        },
+        "error": {
+            "name_not_unique": "名称已存在, 请重新填写",
+            "ip_already_configured": "IP地址已被其它实体使用",
+            "ip_invalid": "不正确的IP地址",
+            "ip_range": "IP地址不在互通的子网内"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "description": "如果此设备错误的标记自己是否在家, 请增加间隔时间.",
+                "data": {
+                    "consider_home": "检查间隔 (秒)"
+                },
+                "data_description": {
+                    "consider_home": "判断此设备是否在家的检查间隔时间"
+                }
+            }
+        }
+    }
+}
