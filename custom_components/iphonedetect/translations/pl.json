@@ -1,0 +1,55 @@
+{
+    "issues": {
+        "deprecated_yaml_import": {
+          "title": "Konfiguracja YAML jest przestarzała i zostanie usunięta",
+          "description": "Konfigurowanie {integration_title} za pomocą YAML jest przestarzałe i zostanie usunięte.\n\nTwoja istniejąca konfiguracja YAML została automatycznie zaimportowana do interfejsu użytkownika.\n\nUsuń konfigurację `{domain}` z pliku configuration.yaml i zrestartuj Home Assistant, aby rozwiązać ten problem."
+        }
+    },    
+    "config": {
+        "step": {
+            "user": {
+                "description": "Upewnij się, że urządzenie ma statyczny adres IP",
+                "data": {
+                    "name": "Nazwa",
+                    "ip_address": "Adres IP",
+                    "consider_home": "Czas uznania urządzenia w domu (sekundy)",
+                    "subnet_check": "Sprawdź, czy IP znajduje się w ustawionej podsieci"
+                },
+                "data_description": {
+                    "name": "Ustaw unikalną nazwę dla encji",
+                    "consider_home": "Czas oczekiwania przed oznaczeniem urządzenia jako poza domem"
+                }
+            },
+            "reconfigure": {
+                "description": "Zaktualizuj konfigurację dla {device_name}.",
+                "data": {
+                    "ip_address": "Adres IP",
+                    "subnet_check": "Sprawdź, czy IP znajduje się w ustawionej podsieci"
+                }
+            }
+        },
+        "abort": {
+            "already_configured": "Urządzenie jest już skonfigurowane",
+            "unknown": "Nieoczekiwany błąd"
+        },
+        "error": {
+            "name_not_unique": "Nazwa nie jest unikalna, wybierz inną",
+            "ip_already_configured": "Adres IP jest już używany przez inne urządzenie",
+            "ip_invalid": "Nieprawidłowy adres IP",
+            "ip_range": "Adres IP nie znajduje się w zakresie podsieci HASS"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "description": "Zwiększ czas, jeśli urządzenie błędnie oznacza się jako poza domem.",
+                "data": {
+                    "consider_home": "Czas uznania urządzenia w domu (sekundy)"
+                },
+                "data_description": {
+                    "consider_home": "Czas oczekiwania przed oznaczeniem urządzenia jako poza domem"
+                }
+            }
+        }
+    }
+}
